@@ -1,0 +1,19 @@
+sudo: false
+distro: trusty
+
+language: python
+
+python:
+  - "3.5"
+  - "3.6"
+  - "3.7"
+
+
+install:
+  - python3 -m pip install codecov>=2.0.9
+
+script:
+  - python3 setup.py test
+
+after_success:
+  - codecov
