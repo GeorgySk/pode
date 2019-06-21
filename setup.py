@@ -7,6 +7,10 @@ import pode
 
 project_base_url = 'https://github.com/LostFan123/pode/'
 
+install_requires = [
+    'lz>=0.8.1',
+    'shapely>=1.6.4'
+]
 setup_requires = [
     'pytest-runner>=4.2',
 ]
@@ -27,5 +31,6 @@ setup(name='pode',
       url=project_base_url,
       download_url=project_base_url + 'archive/master.zip',
       python_requires='>=3.5',
+      install_requires=install_requires,
       setup_requires=setup_requires,
       tests_require=tests_require)
