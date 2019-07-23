@@ -25,7 +25,7 @@ def test_number_of_segments(ring: LinearRing) -> None:
 
 
 @given(linear_rings)
-def test_first_and_last_points_equality(ring: LinearRing) -> None:
+def test_endpoints(ring: LinearRing) -> None:
     lines = list(segments(ring))
     note(f"Ring: {ring.wkt}")
     assert lines[0].coords[0] == lines[-1].coords[-1]
@@ -34,7 +34,7 @@ def test_first_and_last_points_equality(ring: LinearRing) -> None:
 @pytest.mark.skip(reason="Upstream bug for LinearRing.equals. "
                          "Fails for rings with overlapping collinear segments")
 @given(linear_rings)
-def test_recreation_equality(ring: LinearRing) -> None:
+def test_recreation(ring: LinearRing) -> None:
     lines = list(segments(ring))
     first_coordinate = compose(itemgetter(0), LineString.coords.fget)
     first_points = map(first_coordinate, lines)
