@@ -35,7 +35,10 @@ from pode.utils import (next_index,
 
 
 def segments(ring: LinearRing) -> Iterator[LineString]:
-    """Yields consecutive lines from the given ring"""
+    """
+    Yields consecutive lines from the given ring
+    Doesn't work for degenerate geometries.
+    """
     pairs = pairwise(ring.coords)
     yield from map(LineString, pairs)
 
