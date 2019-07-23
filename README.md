@@ -8,34 +8,22 @@ pode
 [![](https://badge.fury.io/py/pode.svg)](https://badge.fury.io/py/pode "PyPI")
 
 In what follows
-- `python` is an alias for `python3.5` or any later
-version (`python3.6` and so on),
-- `pypy` is an alias for `pypy3.5` or any later
-version (`pypy3.6` and so on).
+- `python` is an alias for `python3.6` or any later
+version (`python3.7` and so on).
 
 Installation
 ------------
 
 Install the latest `pip` & `setuptools` packages versions:
-- with `CPython`
   ```bash
   python -m pip install --upgrade pip setuptools
-  ```
-- with `PyPy`
-  ```bash
-  pypy -m pip install --upgrade pip setuptools
   ```
 
 ### User
 
 Download and install the latest stable version from `PyPI` repository:
-- with `CPython`
   ```bash
   python -m pip install --upgrade pode
-  ```
-- with `PyPy`
-  ```bash
-  pypy -m pip install --upgrade pode
   ```
 
 ### Developer
@@ -47,13 +35,8 @@ cd pode
 ```
 
 Install:
-- with `CPython`
   ```bash
   python setup.py install
-  ```
-- with `PyPy`
-  ```bash
-  pypy setup.py install
   ```
 
 Development
@@ -109,27 +92,16 @@ as separate pull request.
 ### Running tests
 
 Plain:
-- with `CPython`
   ```bash
   python setup.py test
   ```
-- with `PyPy`
-  ```bash
-  pypy setup.py test
-  ```
 
 Inside `Docker` container:
-- with `CPython`
   ```bash
   docker-compose --file docker-compose.cpython.yml up
   ```
-- with `PyPy`
-  ```bash
-  docker-compose --file docker-compose.pypy.yml up
-  ```
 
 `Bash` script (e.g. can be used in `Git` hooks):
-- with `CPython`
   ```bash
   ./run-tests.sh
   ```
@@ -138,21 +110,11 @@ Inside `Docker` container:
   ./run-tests.sh cpython
   ```
 
-- with `PyPy`
-  ```bash
-  ./run-tests.sh pypy
-  ```
-
 `PowerShell` script (e.g. can be used in `Git` hooks):
-- with `CPython`
   ```powershell
   .\run-tests.ps1
   ```
   or
   ```powershell
   .\run-tests.ps1 cpython
-  ```
-- with `PyPy`
-  ```powershell
-  .\run-tests.ps1 pypy
   ```
