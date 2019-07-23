@@ -7,21 +7,11 @@ import pode
 
 project_base_url = 'https://github.com/LostFan123/pode/'
 
-install_requires = [
-    'lz>=0.8.1',
-    'matplotlib>=2.2.2',
-    'networkx>=2.4',
-    'numpy>=1.16.3',
-    'shapely==1.6.4.post2'
-]
 setup_requires = [
     'pytest-runner>=4.2',
 ]
-tests_require = [
-    'pytest>=3.8.1',
-    'pytest-cov>=2.6.0',
-    'hypothesis>=3.73.1',
-]
+install_requires = Path('requirements.txt').read_text()
+tests_require = Path('requirements-tests.txt').read_text()
 
 setup(name='pode',
       packages=find_packages(exclude=('tests', 'tests.*')),
@@ -34,6 +24,6 @@ setup(name='pode',
       url=project_base_url,
       download_url=project_base_url + 'archive/master.zip',
       python_requires='>=3.6',
-      install_requires=install_requires,
       setup_requires=setup_requires,
+      install_requires=install_requires,
       tests_require=tests_require)

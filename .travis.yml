@@ -3,16 +3,21 @@ distro: trusty
 
 language: python
 
-python:
-  - "3.6"
-  - "3.7"
+matrix:
+  include:
+    - python: 3.6
+    - python: 3.7
+      dist: xenial
+      sudo: true
 
 
 install:
-  - python3 -m pip install codecov>=2.0.9
+  - python -m pip install codecov
+  - python -m pip install -r requirements-tests.txt
+  - python -m pip install -r requirements.txt
 
 script:
-  - python3 setup.py test
+  - pytest
 
 after_success:
-  - codecov
+  - python -m codecov -f coverage.xml -X gcov

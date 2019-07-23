@@ -12,7 +12,8 @@ services:
       - ./pode/:/opt/pode/pode/
       - ./tests/:/opt/pode/tests/
       - ./README.md:/opt/pode/README.md
+      - ./requirements.txt:/opt/pode/requirements.txt
+      - ./requirements-tests.txt:/opt/pode/requirements-tests.txt
       - ./setup.py:/opt/pode/setup.py
       - ./setup.cfg:/opt/pode/setup.cfg
-    entrypoint: python3
-    command: setup.py test
+    command: pytest

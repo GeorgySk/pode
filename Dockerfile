@@ -8,7 +8,10 @@ WORKDIR /opt/pode
 COPY pode/ pode/
 COPY tests/ tests/
 COPY README.md .
+COPY requirements.txt .
+COPY requirements-tests.txt .
 COPY setup.py .
 COPY setup.cfg .
 
-RUN pip install -e .
+RUN pip install -r requirements.txt
+RUN pip install -r requirements-tests.txt
