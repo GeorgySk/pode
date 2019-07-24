@@ -1,6 +1,7 @@
 from .geometry import (disjoint_lines,
                        disjoint_polygons_lists,
                        finite_floats,
+                       linear_rings,
                        lines_one_in_another,
                        overlapping_lines,
                        polygons,

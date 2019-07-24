@@ -18,7 +18,8 @@ from hypothesis.strategies import (SearchStrategy,
                                    tuples)
 from lz.iterating import interleave
 from shapely.affinity import rotate
-from shapely.geometry import (LineString,
+from shapely.geometry import (LinearRing,
+                              LineString,
                               MultiPolygon,
                               Point,
                               Polygon,
@@ -119,6 +120,12 @@ three_unique_coordinates_lists = lists(coordinates,
 triangles = (three_unique_coordinates_lists
              .filter(form_object_with_area)
              .map(Polygon))
+
+three_or_more_unique_coordinates_lists = lists(coordinates,
+                                               min_size=3,
+                                               max_size=MAX_ITERABLES_SIZE,
+                                               unique=True)
+linear_rings = three_or_more_unique_coordinates_lists.map(LinearRing)
 
 circles = builds(Point.buffer, points, positive_floats)
 

@@ -46,6 +46,8 @@ def segments(ring: LinearRing) -> Iterator[LineString]:
 def right_left_parts(polygon: Polygon,
                      line: LineString) -> Tuple[Polygon, Polygon]:
     """Splits polygon by a line and returns two parts: right and left"""
+    if len(line.coords) > 2:
+        raise ValueError("Only lines consisting of 2 points are supported")
     part, other_part = safe_split(polygon, line)
     # sometimes due to precision errors a site point lying on a polygon's
     # segment can be lying a bit inside of it which will make the
