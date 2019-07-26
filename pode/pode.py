@@ -27,18 +27,18 @@ from shapely.geometry import (LineString,
 from shapely.geometry.base import BaseGeometry
 from shapely.geometry.polygon import orient
 
+from .geometry_utils import (midpoint,
+                             right_left_parts,
+                             right_part,
+                             segments)
 from .utils import (cached_sum,
                     difference_by_key,
                     find_if_or_last,
                     iff,
-                    midpoint,
                     next_enumerate,
                     last_index,
                     next_index,
-                    right_left_parts,
-                    right_part,
-                    scalar_multiplication,
-                    segments)
+                    scalar_multiplication)
 
 
 # The following monkey-patch should be removed
