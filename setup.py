@@ -9,6 +9,7 @@ project_base_url = 'https://github.com/LostFan123/pode/'
 
 install_requires = [
     'lz>=0.8.1',
+    'networkx>=2.3'
     'shapely>=1.6.4'
 ]
 setup_requires = [

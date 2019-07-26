@@ -11,13 +11,15 @@ from typing import (Callable,
                     Tuple,
                     TypeVar)
 
-from lz.functional import compose
+from lz.functional import (compose,
+                           pack)
 
 T = TypeVar('T')
+Predicate = Callable[[T], bool]
 
 
 def next_enumerate(iterable: Iterable[T],
-                   predicate: Callable[[T], bool]) -> Tuple[int, T]:
+                   predicate: Predicate) -> Tuple[int, T]:
     """
     Returns index and value of the first element
     satisfying a predicate
@@ -27,19 +29,19 @@ def next_enumerate(iterable: Iterable[T],
 
 
 def next_index(iterable: Iterable[T],
-               predicate: Callable[[T], bool]) -> int:
+               predicate: Predicate) -> int:
     """Returns index of the first element satisfying a predicate"""
     return next(index for index, value in enumerate(iterable)
                 if predicate(value))
 
 
 def last_index(iterable: Sequence[T],
-               predicate: Callable[[T], bool]) -> int:
+               predicate: Predicate) -> int:
     """Returns index of a last element satisfying a predicate"""
     return len(iterable) - next_index(reversed(iterable), predicate)
 
 
-def find_if_or_last(predicate: Callable[[T], bool],
+def find_if_or_last(predicate: Predicate,
                     iterable: Iterable[T]) -> Optional[T]:
     """
     Returns the first element of `iterable`
@@ -86,3 +88,13 @@ def cached_sum(*values: Tuple[float]) -> float:
     and remembers results for the same input
     """
     return sum(values)
+
+
+def starfilter(predicate: Predicate,
+               iterable: Iterable[T]) -> Iterable[T]:
+    """
+    Can be used when elements of an iterable are packed in tuples
+    but the predicate function expects separate arguments.
+    Similar to `itertools.starmap`.
+    """
+    return filter(pack(predicate), iterable)

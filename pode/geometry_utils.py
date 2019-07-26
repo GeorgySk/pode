@@ -1,15 +1,24 @@
-from itertools import chain
+from functools import partial
+from itertools import (chain,
+                       combinations,
+                       product,
+                       starmap)
+from math import isclose
 from operator import itemgetter
 from typing import (Callable,
                     Iterator,
+                    Sequence,
                     Tuple)
 
+import networkx as nx
 from lz.functional import compose
 from lz.iterating import pairwise
 from shapely.geometry import (LineString,
                               LinearRing,
                               Polygon)
 from shapely.ops import split
+
+from pode.utils import starfilter
 
 
 def segments(ring: LinearRing) -> Iterator[LineString]:
@@ -56,3 +65,46 @@ def safe_split(polygon: Polygon,
 def midpoint(line: LineString) -> Tuple[float, float]:
     """Returns coordinates of the middle of the input line"""
     return line.interpolate(0.5, normalized=True).coords[0]
+
+
+def to_graph(polygons: Sequence[Polygon]) -> nx.Graph:
+    """
+    Returns graph representation of input polygons.
+    Edges are defined by polygons with touching sides.
+    """
+    graph = nx.Graph()
+    for pair in neighbors(polygons):
+        graph.add_edge(*pair)
+    return graph
+
+
+def neighbors(polygons: Sequence[Polygon]
+              ) -> Iterator[Tuple[Polygon, Polygon]]:
+    """Returns those polygons that have touching sides"""
+    pairs = combinations(polygons, 2)
+    yield from starfilter(side_touches, pairs)
+
+
+def side_touches(polygon: Polygon,
+                 other: Polygon) -> bool:
+    """Determines if polygons have touching sides"""
+    sides = segments(polygon.exterior)
+    other_sides = segments(other.exterior)
+    sides_combinations = product(sides, other_sides)
+    return any(starmap(are_touching, sides_combinations))
+
+
+def are_touching(segment: LineString,
+                 other: LineString) -> bool:
+    """
+    Checks if two segments lie on the same line
+    and touch in more than one point
+    """
+    if max(len(segment.coords), len(other.coords)) > 2:
+        raise ValueError('Can check only lines having 2 points')
+    distance_to_other = partial(LineString.distance, other)
+    distance_to_segment = partial(LineString.distance, segment)
+    segment_distances = map(distance_to_other, segment.boundary)
+    other_distances = map(distance_to_segment, other.boundary)
+    return isclose(0, max(segment_distances)) or isclose(0, max(other_distances))
+
