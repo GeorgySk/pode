@@ -95,16 +95,16 @@ def side_touches(polygon: Polygon,
 
 
 def are_touching(segment: LineString,
-                 other: LineString) -> bool:
+                 other: LineString,
+                 *,
+                 buffer: float = 1e-11) -> bool:
     """
     Checks if two segments lie on the same line
     and touch in more than one point
     """
-    if max(len(segment.coords), len(other.coords)) > 2:
-        raise ValueError('Can check only lines having 2 points')
-    distance_to_other = partial(LineString.distance, other)
-    distance_to_segment = partial(LineString.distance, segment)
-    segment_distances = map(distance_to_other, segment.boundary)
-    other_distances = map(distance_to_segment, other.boundary)
-    return isclose(0, max(segment_distances)) or isclose(0, max(other_distances))
-
+    # Buffering a line into a polygon to account for precision errors
+    buffered_segment = segment.buffer(buffer)
+    intersection = buffered_segment.intersection(other)
+    return (isinstance(intersection, LineString)
+            # check for lines touching initially in one point
+            and intersection.length > buffer * 2)
