@@ -8,6 +8,7 @@ from hypothesis.strategies import (SearchStrategy,
                                    builds,
                                    floats,
                                    lists,
+                                   sampled_from,
                                    sets,
                                    tuples)
 from shapely.geometry import (LineString,
@@ -20,6 +21,7 @@ to_finite_floats = partial(floats,
                            allow_nan=False,
                            width=16)
 finite_floats = to_finite_floats()
+nonnegative_floats = to_finite_floats(min_value=0)
 coordinates = slope_intercepts = tuples(finite_floats, finite_floats)
 segments = builds(LineString, lists(coordinates,
                                     min_size=2,
@@ -79,3 +81,5 @@ def to_disjoint_lines(points: List[Point]) -> Tuple[LineString, LineString]:
 
 
 disjoint_lines = builds(to_disjoint_lines, to_aligned_points(4))
+
+offset_sides = sampled_from(['left', 'right'])
