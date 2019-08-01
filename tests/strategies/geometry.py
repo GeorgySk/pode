@@ -15,6 +15,7 @@ from shapely.geometry import (LineString,
                               Point)
 
 from tests.configs import ABS_TOL
+from tests.utils import points_are_sparse
 
 T = TypeVar('T')
 
@@ -58,6 +59,7 @@ def to_containing_lines(points: List[Point]) -> Tuple[LineString, LineString]:
 
 
 lines_one_in_another = builds(to_containing_lines, to_aligned_points(4))
+lines_one_in_another = lines_one_in_another.filter(points_are_sparse)
 
 
 def to_overlapping_lines(points: List[Point]) -> Tuple[LineString, LineString]:
@@ -67,6 +69,7 @@ def to_overlapping_lines(points: List[Point]) -> Tuple[LineString, LineString]:
 
 
 overlapping_lines = builds(to_overlapping_lines, to_aligned_points(4))
+overlapping_lines = overlapping_lines.filter(points_are_sparse)
 
 
 def to_touching_lines(points: List[Point]) -> Tuple[LineString, LineString]:
@@ -76,6 +79,7 @@ def to_touching_lines(points: List[Point]) -> Tuple[LineString, LineString]:
 
 
 touching_lines = builds(to_touching_lines, to_aligned_points(3))
+touching_lines = touching_lines.filter(points_are_sparse)
 
 
 def to_disjoint_lines(points: List[Point]) -> Tuple[LineString, LineString]:
@@ -85,5 +89,6 @@ def to_disjoint_lines(points: List[Point]) -> Tuple[LineString, LineString]:
 
 
 disjoint_lines = builds(to_disjoint_lines, to_aligned_points(4))
+disjoint_lines = disjoint_lines.filter(points_are_sparse)
 
 offset_sides = sampled_from(['left', 'right'])
