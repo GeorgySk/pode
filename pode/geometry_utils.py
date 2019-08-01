@@ -97,14 +97,51 @@ def side_touches(polygon: Polygon,
 def are_touching(segment: LineString,
                  other: LineString,
                  *,
-                 buffer: float = 1e-10) -> bool:
+                 buffer: float = 1e-9) -> bool:
     """
     Checks if two segments lie on the same line
-    and touch in more than one point
+    and touch in more than one point.
+    Buffer values less than 1e-9 can lead to errors
     """
     # Buffering a line into a polygon to account for precision errors
-    buffered_segment = segment.buffer(buffer)
+    left_side_offset = line_offset(segment, buffer, side='left')
+    right_side_offset = line_offset(segment, buffer, side='right')
+    buffered_segment = Polygon([*left_side_offset.coords,
+                                *right_side_offset.coords])
     intersection = buffered_segment.intersection(other)
     return (isinstance(intersection, LineString)
             # check for lines touching initially in one point
-            and intersection.length > buffer * 2)
+            and intersection.length > buffer)
+
+
+def line_offset(line: LineString,
+                distance: float,
+                *,
+                side: str) -> LineString:
+    """
+    This is a wrapper for Shapely's LineString.parallel_offset method.
+    As due to GEOS bugs it can produce MultiLineString's sometimes,
+    we need to construct the offset manually in such cases.
+    Bug report: https://github.com/Toblerity/Shapely/issues/746
+    """
+    if len(line.coords) > 2:
+        raise ValueError('Can offset only lines consisting of 2 points')
+
+    result = line.parallel_offset(distance, side=side)
+    if isinstance(result, LineString) and len(result.coords) == 2:
+        return result
+
+    dy = line.boundary[1].y - line.boundary[0].y
+    dx = line.boundary[1].x - line.boundary[0].x
+    m = dy / dx
+    direction = 1 if side == 'left' else -1
+    # based on solution of the following equations system:
+    # 𝛿y = -𝛿x * (1 / m)  # slope of orthogonal line
+    # 𝛿x**2 + 𝛿y**2 = distance**2
+    x_offset = direction * distance / (1 + 1 / m ** 2) ** 0.5
+    y_offset = -direction * distance / (1 + m ** 2) ** 0.5
+    # reorienting for 'right' as in LineString.parallel_offset
+    return LineString([(line.boundary[0].x + x_offset,
+                        line.boundary[0].y + y_offset),
+                       (line.boundary[1].x + x_offset,
+                        line.boundary[1].y + y_offset)][::direction])
