@@ -109,7 +109,9 @@ def are_touching(segment: LineString,
     buffered_segment = Polygon([*left_side_offset.coords,
                                 *right_side_offset.coords])
     intersection = buffered_segment.intersection(other)
-    return isinstance(intersection, LineString)
+    return (isinstance(intersection, LineString)
+            # check for lines touching initially in one point
+            and intersection.length > buffer)
 
 
 def line_offset(line: LineString,

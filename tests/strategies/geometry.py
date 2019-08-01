@@ -14,6 +14,8 @@ from hypothesis.strategies import (SearchStrategy,
 from shapely.geometry import (LineString,
                               Point)
 
+from tests.configs import ABS_TOL
+
 T = TypeVar('T')
 
 to_finite_floats = partial(floats,
@@ -27,6 +29,8 @@ segments = builds(LineString, lists(coordinates,
                                     min_size=2,
                                     max_size=2,
                                     unique=True))
+# too small segments conflict with precision errors
+segments = segments.filter(ABS_TOL.__lt__)
 
 fractions = to_finite_floats(min_value=0,
                              max_value=1)
