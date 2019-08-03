@@ -1,9 +1,7 @@
-from functools import partial
 from itertools import (chain,
                        combinations,
                        product,
                        starmap)
-from math import isclose
 from operator import itemgetter
 from typing import (Callable,
                     Iterator,
@@ -103,7 +101,7 @@ def are_touching(segment: LineString,
     and touch in more than one point.
     Buffer values less than 1e-7 can lead to errors
     """
-    # lies completely coincide
+    # lines completely coincide
     if segment.equals(other) or segment.equals(LineString(other.coords[::-1])):
         return True
     # lines are touching only in one point
