@@ -97,12 +97,18 @@ def side_touches(polygon: Polygon,
 def are_touching(segment: LineString,
                  other: LineString,
                  *,
-                 buffer: float = 1e-8) -> bool:
+                 buffer: float = 1e-7) -> bool:
     """
     Checks if two segments lie on the same line
     and touch in more than one point.
-    Buffer values less than 1e-8 can lead to errors
+    Buffer values less than 1e-7 can lead to errors
     """
+    # lies completely coincide
+    if segment.equals(other) or segment.equals(LineString(other.coords[::-1])):
+        return True
+    # lines are touching only in one point
+    if any(map(other.boundary.contains, segment.boundary)):
+        return False
     # Buffering a line into a polygon to account for precision errors
     left_side_offset = line_offset(segment, buffer, side='left')
     right_side_offset = line_offset(segment, buffer, side='right')
