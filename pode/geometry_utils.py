@@ -149,7 +149,7 @@ def line_offset(line: LineString,
         # 𝛿y = -𝛿x * (1 / m)  # slope of orthogonal line
         # 𝛿x**2 + 𝛿y**2 = distance**2
         x_offset = direction * distance / (1 + 1 / m ** 2) ** 0.5
-        y_offset = -direction * distance / (1 + m ** 2) ** 0.5
+        y_offset = -distance / (1 + m ** 2) ** 0.5
     # reorienting for 'right' as in LineString.parallel_offset
     return LineString([(line.boundary[0].x + x_offset,
                         line.boundary[0].y + y_offset),
