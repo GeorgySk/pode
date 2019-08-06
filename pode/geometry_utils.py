@@ -99,9 +99,8 @@ def are_touching(segment: LineString,
     """
     Checks if two segments lie on the same line
     and touch in more than one point.
-    Buffer values less than 1e-7 can lead to errors
+    Buffer values less than 1e-8 can lead to errors
     """
-    # lines completely coincide
     if isinstance(segment.intersection(other), LineString):
         return True
     # lines are touching only in one point
