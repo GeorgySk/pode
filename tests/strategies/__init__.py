@@ -1,8 +1,10 @@
 from .geometry import (disjoint_lines,
+                       disjoint_polygons_pairs,
                        finite_floats,
                        lines_one_in_another,
                        nonnegative_floats,
                        offset_sides,
                        overlapping_lines,
+                       polygons,
                        segments,
                        touching_lines)

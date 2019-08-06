@@ -1,4 +1,5 @@
 from functools import partial
+from itertools import repeat
 from typing import (List,
                     Sequence,
                     Tuple,
@@ -11,11 +12,17 @@ from hypothesis.strategies import (SearchStrategy,
                                    sampled_from,
                                    sets,
                                    tuples)
+from lz.functional import pack
+from shapely.affinity import rotate
 from shapely.geometry import (LineString,
-                              Point)
+                              Point,
+                              Polygon,
+                              box)
 
 from tests.configs import ABS_TOL
-from tests.utils import points_are_sparse
+from tests.utils import (form_object_with_area,
+                         points_are_sparse,
+                         polygons_are_sparse)
 
 T = TypeVar('T')
 
@@ -25,7 +32,12 @@ to_finite_floats = partial(floats,
                            width=16)
 finite_floats = to_finite_floats()
 nonnegative_floats = to_finite_floats(min_value=0)
+positive_floats = to_finite_floats(min_value=ABS_TOL,
+                                   exclude_min=True)
 coordinates = slope_intercepts = tuples(finite_floats, finite_floats)
+angles = to_finite_floats(min_value=-360,
+                          max_value=360)
+points = builds(Point, finite_floats, finite_floats)
 segments = builds(LineString, lists(coordinates,
                                     min_size=2,
                                     max_size=2,
@@ -92,3 +104,22 @@ disjoint_lines = builds(to_disjoint_lines, to_aligned_points(4))
 disjoint_lines = disjoint_lines.filter(points_are_sparse)
 
 offset_sides = sampled_from(['left', 'right'])
+
+three_unique_coordinates_lists = lists(coordinates,
+                                       min_size=3,
+                                       max_size=3,
+                                       unique=True)
+triangles = (three_unique_coordinates_lists
+             .filter(form_object_with_area)
+             .map(Polygon))
+
+circles = builds(Point.buffer, points, positive_floats)
+
+straight_rectangles = (builds(box, *repeat(finite_floats, 4))
+                       .filter(form_object_with_area))
+rectangles = builds(rotate, straight_rectangles, angles)
+
+polygons = triangles | circles | rectangles
+disjoint_polygons_pairs = (tuples(polygons, polygons)
+                           .filter(pack(Polygon.disjoint))
+                           .filter(pack(polygons_are_sparse)))
