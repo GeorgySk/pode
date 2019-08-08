@@ -29,15 +29,16 @@ def points_are_sparse(lines: Iterable[LineString],
     return all(distance > abs_tol for distance in distances)
 
 
-def polygons_are_sparse(polygon: Polygon,
-                        other: Polygon,
+def polygons_are_sparse(polygons: Iterable[Polygon],
                         *,
                         abs_tol: float = ABS_TOL) -> bool:
     """
-    Checks if pair of polygons are too close.
+    Checks if all polygons are not too close to each other.
     Used to reject geometries that can lead to precision errors.
     """
-    return polygon.distance(other) > abs_tol
+    pairs = combinations(polygons, 2)
+    distances = starmap(Polygon.distance, pairs)
+    return all(distance > abs_tol for distance in distances)
 
 
 def form_object_with_area(vertices: Iterable[Tuple[float, float]]) -> bool:

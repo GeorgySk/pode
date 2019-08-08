@@ -4,6 +4,7 @@ from itertools import (chain,
                        starmap)
 from operator import itemgetter
 from typing import (Callable,
+                    Iterable,
                     Iterator,
                     Sequence,
                     Tuple)
@@ -76,7 +77,7 @@ def to_graph(polygons: Sequence[Polygon]) -> nx.Graph:
     return graph
 
 
-def neighbors(polygons: Sequence[Polygon]
+def neighbors(polygons: Iterable[Polygon]
               ) -> Iterator[Tuple[Polygon, Polygon]]:
     """Returns those polygons that have touching sides"""
     pairs = combinations(polygons, 2)

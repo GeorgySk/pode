@@ -8,24 +8,27 @@ from typing import (List,
 from hypothesis.strategies import (SearchStrategy,
                                    builds,
                                    floats,
+                                   integers,
                                    lists,
                                    sampled_from,
                                    sets,
                                    tuples)
-from lz.functional import pack
 from shapely.affinity import rotate
 from shapely.geometry import (LineString,
                               Point,
                               Polygon,
                               box)
 
-from tests.configs import ABS_TOL
+from tests.configs import (ABS_TOL,
+                           MAX_ITERABLES_SIZE)
 from tests.utils import (form_object_with_area,
                          points_are_sparse,
                          polygons_are_sparse)
 
 T = TypeVar('T')
 
+iterable_sizes = integers(min_value=0,
+                          max_value=MAX_ITERABLES_SIZE)
 to_finite_floats = partial(floats,
                            allow_infinity=False,
                            allow_nan=False,
@@ -121,5 +124,7 @@ rectangles = builds(rotate, straight_rectangles, angles)
 
 polygons = triangles | circles | rectangles
 disjoint_polygons_pairs = (tuples(polygons, polygons)
-                           .filter(pack(Polygon.disjoint))
-                           .filter(pack(polygons_are_sparse)))
+                           .filter(polygons_are_sparse))
+disjoint_polygons_lists = (lists(polygons, max_size=MAX_ITERABLES_SIZE)
+                           .filter(polygons_are_sparse))
+same_polygons_iterators = builds(repeat, polygons, iterable_sizes)
