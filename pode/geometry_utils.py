@@ -15,7 +15,8 @@ from lz.iterating import pairwise
 from shapely.geometry import (LineString,
                               LinearRing,
                               Polygon)
-from shapely.ops import split
+from shapely.ops import (split,
+                         triangulate)
 
 from pode.utils import starfilter
 
@@ -156,3 +157,11 @@ def line_offset(line: LineString,
                         line.boundary[0].y + y_offset),
                        (line.boundary[1].x + x_offset,
                         line.boundary[1].y + y_offset)][::direction])
+
+
+def to_convex_parts(polygon: Polygon) -> Iterator[Polygon]:
+    """
+    Splits a polygon to convex parts.
+    Implemented by simple Delaunay triangulation.
+    """
+    yield from filter(polygon.contains, triangulate(polygon))
