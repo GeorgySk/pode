@@ -38,7 +38,7 @@ def next_index(iterable: Iterable[T],
 def last_index(iterable: Sequence[T],
                predicate: Predicate) -> int:
     """Returns index of a last element satisfying a predicate"""
-    return len(iterable) - next_index(reversed(iterable), predicate)
+    return len(iterable) - next_index(reversed(iterable), predicate) - 1
 
 
 def find_if_or_last(predicate: Predicate,
@@ -91,7 +91,7 @@ def cached_sum(*values: Tuple[float]) -> float:
 
 
 def starfilter(predicate: Predicate,
-               iterable: Iterable[T]) -> Iterable[T]:
+               iterable: Iterable[T]) -> Iterator[T]:
     """
     Can be used when elements of an iterable are packed in tuples
     but the predicate function expects separate arguments.
