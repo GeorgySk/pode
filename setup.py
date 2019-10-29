@@ -9,7 +9,10 @@ project_base_url = 'https://github.com/LostFan123/pode/'
 
 install_requires = [
     'lz>=0.8.1',
-    'shapely>=1.6.4'
+    'matplotlib>=2.2.2',
+    'networkx>=2.4',
+    'numpy>=1.16.3',
+    'shapely==1.6.4.post2'
 ]
 setup_requires = [
     'pytest-runner>=4.2',
