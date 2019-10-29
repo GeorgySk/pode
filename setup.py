@@ -12,7 +12,7 @@ install_requires = [
     'matplotlib>=2.2.2',
     'networkx>=2.4',
     'numpy>=1.16.3',
-    'shapely>=1.6.4.post2'
+    'shapely==1.6.4.post2'
 ]
 setup_requires = [
     'pytest-runner>=4.2',
