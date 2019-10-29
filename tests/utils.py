@@ -33,16 +33,16 @@ def to_coords(geometry: BaseGeometry) -> Iterator[Tuple[float, float]]:
     yield from geometry.coords
 
 
-@to_coords.register
-def _(geometry: Polygon) -> Iterator[Tuple[float, float]]:
+@to_coords.register(Polygon)
+def _(geometry) -> Iterator[Tuple[float, float]]:
     interiors_coords_sequences = map(to_coords, geometry.interiors)
     interiors_coords = flatten(interiors_coords_sequences)
     exterior_coords = to_coords(geometry.exterior)
     yield from chain(interiors_coords, exterior_coords)
 
 
-@to_coords.register
-def _(geometry: BaseMultipartGeometry) -> Iterator[Tuple[float, float]]:
+@to_coords.register(BaseMultipartGeometry)
+def _(geometry) -> Iterator[Tuple[float, float]]:
     coords_sequences = map(to_coords, geometry.geoms)
     yield from flatten(coords_sequences)
 
