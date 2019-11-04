@@ -185,3 +185,27 @@ def points_range(count: int,
     """Returns equidistant points (`points_count` > 1) on the line"""
     xy = np.linspace(*start.coords, *end.coords, count)
     return asMultiPoint(xy)
+
+
+def join_to_convex(polygons: Iterable[Polygon]) -> Iterator[Polygon]:
+    """Joins polygons to form convex parts of greater size"""
+    polygons = list(polygons)
+    initial_polygon = polygons.pop()
+    while True:
+        resulting_polygon = initial_polygon
+        for index, polygon in enumerate(iter(polygons)):
+            union = resulting_polygon.union(polygon)
+            if isinstance(union, Polygon) and is_convex(union):
+                polygons.pop(index)
+                resulting_polygon = union
+        if resulting_polygon is not initial_polygon:
+            initial_polygon = resulting_polygon
+            continue
+        yield resulting_polygon
+        if not polygons:
+            return
+        initial_polygon = polygons.pop()
+
+
+def is_convex(polygon: Polygon) -> bool:
+    return not polygon.interiors and polygon.convex_hull.equals(polygon)

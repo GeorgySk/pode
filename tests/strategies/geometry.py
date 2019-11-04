@@ -182,10 +182,12 @@ star_polygons = builds(star,
                        rs=sets(positive_floats, min_size=2, max_size=2),
                        n=polygon_side_counts)
 
-nonconvex_polygons = l_shaped_polygons | window_polygons | star_polygons
+nonconvex_polygons = l_shaped_polygons | window_polygons
 nonconvex_polygons = nonconvex_polygons.filter(has_no_close_points)
 
-polygons = convex_polygons | nonconvex_polygons
+polygons = (convex_polygons
+            | nonconvex_polygons
+            | star_polygons.filter(has_no_close_points))
 
 disjoint_polygons_lists = (lists(polygons,
                                  max_size=MAX_ITERABLES_SIZE)
