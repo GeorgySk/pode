@@ -49,6 +49,7 @@ from shapely.geometry.base import (BaseGeometry,
 from shapely.geometry.polygon import orient
 from shapely.ops import unary_union
 
+from pode.geometry_utils import points_range
 from .geometry_utils import (are_touching,
                              is_on_the_right,
                              midpoint,
@@ -1091,3 +1092,99 @@ def find_sites(polygon: Polygon,
     is_point_in_polygon = compose(polygon.intersects, itemgetter(0))
     sites_in_polygon = filter(is_point_in_polygon, sites.items())
     return dict(sites_in_polygon)
+
+
+def divide_on_the_go(graph: nx.Graph,
+                     requirements: List[float]
+                     ) -> Iterator[Tuple[Polygon, Tuple[Point, float]]]:
+    """
+    Splits a polygon defined by the graph
+    by assigning sites (in the same order as given) on the go
+    """
+    graph = graph.copy()
+    requirements = iter(requirements)
+
+    area_incomplete_polygons = defaultdict(list)
+    pseudo_sites_relations = {}
+
+    assigned_sites_locations = set()
+
+    graph_iterator = iter(graph)
+    while True:
+        if not graph:
+            return
+        polygon: Polygon = next(graph_iterator)
+        sites: SitesType = graph.nodes[polygon]
+        if not sites:
+            try:
+                site_point = find_free_point(polygon, assigned_sites_locations)
+                sites = {site_point: next(requirements)}
+                assigned_sites_locations.add(site_point)
+            except StopIteration:
+                continue
+        pred_polygons = pred_polys(polygon, graph=graph)
+        pred_polygon = unary_union(pred_polygons)
+        if is_area_complete(pred_polygon, sites=sites):
+            if len(sites) == 1:
+                graph.remove_nodes_from(pred_polygons)
+                site_point, requirement = first(sites.items())
+                if site_point not in pseudo_sites_relations:
+                    yield (pred_polygon, *sites.items())
+                else:
+                    original_site = pseudo_sites_relations[site_point]
+                    point, requirement = first(original_site.items())
+                    # TODO: should it be pred_polygons also
+                    all_related_polygons = [*area_incomplete_polygons[point],
+                                            *pred_polygons]
+                    resulting_polygon = unary_union(all_related_polygons)
+                    yield resulting_polygon, (point, requirement)
+            else:
+                neighbor = next_neighbor(polygon, graph=graph)
+                graph = update_graph(polygon=polygon,
+                                     sites=sites,
+                                     edge=None,
+                                     pred_polygons=pred_polygons,
+                                     neighbor=neighbor,
+                                     graph=graph)
+        elif is_area_incomplete(pred_polygon, sites=sites):
+            neighbor = next_neighbor(polygon, graph=graph)
+            edge = graph[polygon][neighbor]['side']
+            if len(sites) == 1:
+                site_point, requirement = first(sites.items())
+                site_point, initial_requirement = first(
+                    pseudo_sites_relations.get(site_point, sites).items())
+                area_incomplete_polygons[site_point].append(pred_polygon)
+                graph.remove_nodes_from(pred_polygons)
+                pseudo_requirement = requirement - pred_polygon.area
+                pseudo_site_point = Point(midpoint(edge))
+                pseudo_sites_relations[pseudo_site_point] = (
+                    {site_point: initial_requirement})
+                graph.nodes[neighbor].update(
+                    {pseudo_site_point: pseudo_requirement})
+            else:
+                graph = update_graph(polygon=polygon,
+                                     sites=sites,
+                                     edge=edge,
+                                     pred_polygons=pred_polygons,
+                                     neighbor=neighbor,
+                                     graph=graph)
+        else:
+            neighbor = next_neighbor(polygon, graph=graph)
+            edge = (None if neighbor is None
+                    else graph[polygon][neighbor]['side'])
+            graph = update_graph(polygon=polygon,
+                                 sites=sites,
+                                 edge=edge,
+                                 pred_polygons=pred_polygons,
+                                 neighbor=neighbor,
+                                 graph=graph)
+        graph_iterator = iter(graph)
+
+
+def find_free_point(polygon: Polygon,
+                    taken_points: Set[Point]) -> Point:
+    vertices = map(Point, polygon.exterior.coords)
+    for point in vertices:
+        if point not in taken_points:
+            return point
+    raise ValueError("Couldn't find a free vertex for a site")
