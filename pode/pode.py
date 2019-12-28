@@ -17,7 +17,8 @@ from math import isclose
 from operator import (contains,
                       itemgetter,
                       ne,
-                      not_)
+                      not_,
+                      xor)
 from typing import (Callable,
                     Dict,
                     Iterable,
@@ -49,6 +50,12 @@ from shapely.geometry.base import (BaseGeometry,
 from shapely.geometry.polygon import orient
 from shapely.ops import unary_union
 
+from geometry_utils import (to_convex_parts,
+                            join_to_convex,
+                            to_graph)
+from pode.geometry_utils import (rotating_splitter,
+                                 insert_between,
+                                 to_tuple)
 from .geometry_utils import (are_touching,
                              is_on_the_right,
                              midpoint,
@@ -86,6 +93,54 @@ class Partition(NamedTuple):
     polygon: Polygon
 
 
+def divide(polygon: Polygon,
+           *,
+           sites: Optional[SitesType] = None,
+           requirements: Optional[List[float]] = None,
+           joined: bool = False,
+           gradual: bool = False) -> Iterator[Tuple[Polygon,
+                                                    Tuple[Point, float]]]:
+    """
+    Divides given polygon for the given sites or requirements
+    :param polygon: input Shapely polygon
+    :param sites: an optional mapping of Shapely points
+    to area requirements for each point
+    :param requirements: an optional list of area requirements
+    (should sum up to the area of the polygon)
+    :param joined: if `True`, will join consecutive triangles
+    of Delaunay triangulation
+    :param gradual: if `True` will search the split-lines
+    by gradually shifting the edge between two polygon parts
+    :return: parts of the polygon
+    along with corresponding sites points and its requirements
+    """
+    if not xor(sites is None, requirements is None):
+        raise ValueError('At least one of `sites` or `requirements` '
+                         'is required.')
+    if gradual and requirements is None:
+        raise ValueError('Gradual edge search can be performed only for '
+                         'flexible sites positioning. Either provide `sites` '
+                         'instead of `requirements`, or turn off '
+                         'the `gradual` option.')
+    if (requirements is not None
+            and not isclose(sum(requirements), polygon.area)):
+        raise ValueError('Provided requirements do not sum up '
+                         'to the area of the given polygon.')
+    detach = divide_on_the_go if sites is None else detach_and_assign
+    parts = list(to_convex_parts(polygon))
+    if joined:
+        parts = list(join_to_convex(parts))
+    graph = to_graph(parts)
+    graph = to_ordered(graph)
+    if sites is None:
+        yield from detach(graph,
+                          requirements,
+                          with_gradual_search=gradual)
+    else:
+        graph = attach_sites(graph, sites)
+        yield from detach(graph)
+
+
 def area_partition(sites_points: MultiPoint,
                    fractions: Iterable[float],
                    vertices: LinearRing,
@@ -116,9 +171,9 @@ def area_partition(sites_points: MultiPoint,
         vertices_and_sites = vertices_points.union(sites_points)
         vertices_and_sites = sorted(vertices_and_sites,
                                     key=distance_along_vertices)
-        partitions = divide(vertices_and_sites=vertices_and_sites,
-                            sites=sites,
-                            tolerance=tolerance)
+        partitions = divide_in_two(vertices_and_sites=vertices_and_sites,
+                                   sites=sites,
+                                   tolerance=tolerance)
         for partition in partitions:
             if len(partition.sites) == 1:
                 yield (partition.polygon, *partition.sites.items())
@@ -132,10 +187,10 @@ def area_partition(sites_points: MultiPoint,
         sites = partition.sites
 
 
-def divide(vertices_and_sites: List[Point],
-           sites: SitesType,
-           *,
-           tolerance: float) -> Tuple[Partition, Partition]:
+def divide_in_two(vertices_and_sites: List[Point],
+                  sites: SitesType,
+                  *,
+                  tolerance: float) -> Tuple[Partition, Partition]:
     """
     Splits input polygon in two parts
     :param vertices_and_sites: vertices and sites points in CCW order_by_site
@@ -306,7 +361,7 @@ def detach_and_assign(graph: nx.Graph
                     original_site = pseudo_sites_relations[site_point]
                     point, requirement = first(original_site.items())
                     all_related_polygons = [*area_incomplete_polygons[point],
-                                            polygon]
+                                            pred_polygon]
                     resulting_polygon = unary_union(all_related_polygons)
                     yield resulting_polygon, (point, requirement)
             else:
@@ -314,7 +369,6 @@ def detach_and_assign(graph: nx.Graph
                 graph = update_graph(polygon=polygon,
                                      sites=sites,
                                      edge=None,
-                                     pred_polygons=pred_polygons,
                                      neighbor=neighbor,
                                      graph=graph)
         elif is_area_incomplete(pred_polygon, sites=sites):
@@ -324,19 +378,26 @@ def detach_and_assign(graph: nx.Graph
                 site_point, requirement = first(sites.items())
                 site_point, initial_requirement = first(
                     pseudo_sites_relations.get(site_point, sites).items())
-                area_incomplete_polygons[site_point].append(pred_polygon)
-                graph.remove_nodes_from(pred_polygons)
                 pseudo_requirement = requirement - pred_polygon.area
                 pseudo_site_point = Point(midpoint(edge))
+                pred_polygon = insert_between(point=pseudo_site_point,
+                                              vertices=edge.boundary,
+                                              polygon=pred_polygon)
+                area_incomplete_polygons[site_point].append(pred_polygon)
+                graph.remove_nodes_from(pred_polygons)
                 pseudo_sites_relations[pseudo_site_point] = (
                     {site_point: initial_requirement})
                 graph.nodes[neighbor].update(
                     {pseudo_site_point: pseudo_requirement})
+                original_neighbor = neighbor
+                neighbor = insert_between(point=pseudo_site_point,
+                                          vertices=edge.boundary,
+                                          polygon=neighbor)
+                graph = nx.relabel_nodes(graph, {original_neighbor: neighbor})
             else:
                 graph = update_graph(polygon=polygon,
                                      sites=sites,
                                      edge=edge,
-                                     pred_polygons=pred_polygons,
                                      neighbor=neighbor,
                                      graph=graph)
         else:
@@ -345,10 +406,26 @@ def detach_and_assign(graph: nx.Graph
             graph = update_graph(polygon=polygon,
                                  sites=sites,
                                  edge=edge,
-                                 pred_polygons=pred_polygons,
                                  neighbor=neighbor,
                                  graph=graph)
         graph_iterator = iter(graph)
+
+
+def add_point_to_neighbor(point: Point,
+                          vertices: Tuple[Point, Point],
+                          polygon: Polygon,
+                          graph: nx.Graph) -> nx.Graph:
+    """
+    Adds a point between given vertices
+    to the neighbor of the given polygon.
+    """
+    for neighbor in graph.neighbors(polygon):
+        if set(map(to_tuple, vertices)) <= set(neighbor.exterior.coords):
+            new_polygon = insert_between(point=point,
+                                         vertices=vertices,
+                                         polygon=neighbor)
+            return nx.relabel_nodes(graph, {neighbor: new_polygon})
+    return graph
 
 
 def pred_polys(node: Polygon,
@@ -400,18 +477,29 @@ def successors(node: Node,
 def update_graph(polygon: Polygon,
                  sites: SitesType,
                  edge: Optional[LineString],
-                 pred_polygons: Iterable[Polygon],
                  neighbor: Polygon,
-                 graph: nx.Graph) -> nx.Graph:
+                 graph: nx.Graph,
+                 with_gradual_search: bool = False) -> nx.Graph:
+    original_polygon = polygon
     polygon = add_sites(orient(polygon), sites=sites)
     if edge is not None:
         polygon = order_by_edge(polygon, edge=edge)
     else:
         polygon = order_by_site(polygon, sites=sites)
-    partitions_to_process = nonconvex_divide(polygon,
-                                             sites,
-                                             graph=graph)
-    graph.remove_nodes_from(pred_polygons)
+    graph = nx.relabel_nodes(graph, {original_polygon: polygon})
+    if with_gradual_search and len(sites) == 1:
+        partitions_to_process = gradual_search(polygon=polygon,
+                                               sites=sites,
+                                               edge=edge)
+    else:
+        partitions_to_process, graph, neighbor = nonconvex_divide(polygon,
+                                                                  sites,
+                                                                  graph=graph)
+    partitions_union = unary_union([partition.polygon
+                                    for partition in partitions_to_process])
+    nodes_to_remove = [node for node in graph
+                       if partitions_union.contains(node.buffer(-1e-9))]
+    graph.remove_nodes_from(nodes_to_remove)
     if len(partitions_to_process) == 3:  # Case 1.3
         return prepend_partitions_inline(partitions_to_process,
                                          graph=graph,
@@ -469,7 +557,9 @@ def nonconvex_divide(polygon: Polygon,
                      sites: SitesType,
                      *,
                      graph: nx.Graph,
-                     tolerance: float = 1e-4) -> List[Partition]:
+                     tolerance: float = 1e-4) -> Tuple[List[Partition],
+                                                       nx.Graph,
+                                                       Polygon]:
     """
     Splits a pred_poly based on the polygon to 2 or 3 parts
     for further division
@@ -529,7 +619,8 @@ def nonconvex_divide(polygon: Polygon,
             t3 = vertices_and_sites[0]
             line = LineString([t3, t1])
             triangle = Polygon(LineString([t1, t2, t3]))
-            if triangle.is_empty or not triangle.is_valid:
+            if (triangle.is_empty or not triangle.is_valid
+                    or triangle.area < 1e-15):
                 triangle = Polygon()
             try:
                 fixed_point = line.boundary[0]
@@ -551,24 +642,60 @@ def nonconvex_divide(polygon: Polygon,
                                          area_requirement=area_requirement,
                                          graph=graph,
                                          area_tolerance=tolerance)
+            if t not in {t1, t2}:
+                original_polygon = polygon
+                polygon = insert_between(point=t,
+                                         vertices=(t1, t2),
+                                         polygon=polygon)
+                graph = nx.relabel_nodes(graph, {original_polygon: polygon})
+                graph = add_point_to_neighbor(point=t,
+                                              vertices=(t1, t2),
+                                              polygon=polygon,
+                                              graph=graph)
+                if (Point(t1).intersects(plr_1)
+                        and Point(t2).intersects(plr_1)
+                        and (LineString([t1, t2]) in segments(plr_1.exterior)
+                             or LineString([t2, t1])
+                             in segments(plr_1.exterior))):
+                    plr_1 = insert_between(point=t,
+                                           vertices=(t1, t2),
+                                           polygon=plr_1)
+                if (Point(t1).intersects(pll_1)
+                        and Point(t2).intersects(pll_1)
+                        and (LineString([t1, t2]) in segments(pll_1.exterior)
+                             or LineString([t2, t1])
+                             in segments(pll_1.exterior))):
+                    pll_1 = insert_between(point=t,
+                                           vertices=(t1, t2),
+                                           polygon=pll_1)
             triangle = Polygon(LineString([t1, t, t3]))
             if triangle.is_empty or not triangle.is_valid:
                 triangle = Polygon()
             if LineString([t1, t]).is_valid:
-                a = plr_1.union(triangle)
-                # due to precision errors, union can return a multipolygon
-                if isinstance(a, MultiPolygon):
-                    # usually it can be fixed by buffering
-                    a = a.buffer(1e-12)
+                pred_by_line = pred_poly_by_line(LineString([t1, t]),
+                                                 polygon,
+                                                 graph)
+                a = plr_1.union(triangle).union(pred_by_line)
             else:
                 a = plr_1
-            b = pll_1.difference(triangle)
-            a_partition = Partition(polygon=a,
-                                    sites=first_partition.sites)
-            b_partition = Partition(
-                polygon=b,
-                sites=difference_by_key(sites, first_partition.sites))
-            return [a_partition, b_partition]
+                pred_by_line = Polygon()
+            b = pll_1.difference(triangle).difference(pred_by_line)
+            # TODO: this looks like a dirty hack for the issue #13
+            if isinstance(b, MultiPolygon):
+                b = max(b, key=Polygon.area.fget)
+            if not a.is_empty:
+                a_partition = Partition(polygon=a,
+                                        sites=first_partition.sites)
+                b_partition = Partition(
+                    polygon=b,
+                    sites=difference_by_key(sites, first_partition.sites))
+            else:
+                a_partition = Partition(polygon=a,
+                                        sites={})
+                b_partition = Partition(polygon=b,
+                                        sites=sites)
+            return [a_partition, b_partition], graph, next_neighbor(polygon,
+                                                                    graph)
         pred_by_line = pred_poly_by_line(LineString([t1, t2]), polygon, graph)
         if plr_1.area + pred_by_line.area < area_requirement:
             t = bisection_search_w_point(fixed_point=fixed_point,
@@ -578,22 +705,41 @@ def nonconvex_divide(polygon: Polygon,
                                          area_requirement=area_requirement,
                                          graph=graph,
                                          area_tolerance=tolerance)
+            if t not in {t1, t2}:
+                original_polygon = polygon
+                polygon = insert_between(point=t,
+                                         vertices=(t1, t2),
+                                         polygon=polygon)
+                graph = nx.relabel_nodes(graph, {original_polygon: polygon})
+                graph = add_point_to_neighbor(point=t,
+                                              vertices=(t1, t2),
+                                              polygon=polygon,
+                                              graph=graph)
             triangle = Polygon(LineString([t1, t, t3]))
             if triangle.is_empty or not triangle.is_valid:
                 triangle = Polygon()
-            a = plr_1.union(triangle)
-            b = pll_1.difference(triangle).difference(
-                pred_poly_by_line(LineString([t1, t]), polygon, graph))
-            a = Partition(polygon=a,
-                          sites=first_partition.sites)
-            b_sites = difference_by_key(sites, first_partition.sites)
-            b = Partition(polygon=b,
-                          sites=b_sites)
-            return [b, a]
+            pred_by_line = pred_poly_by_line(LineString([t1, t]),
+                                             polygon,
+                                             graph)
+            a = plr_1.union(triangle).union(pred_by_line)
+            b = pll_1.difference(triangle).difference(pred_by_line)
+            if not a.is_empty:
+                a = Partition(polygon=a,
+                              sites=first_partition.sites)
+                b_sites = difference_by_key(sites, first_partition.sites)
+                b = Partition(polygon=b,
+                              sites=b_sites)
+            else:
+                a = Partition(polygon=a,
+                              sites={})
+                b = Partition(polygon=b,
+                              sites=sites)
+            return [a, b], graph, next_neighbor(polygon, graph)
         else:
             ps = midpoint(LineString([t1, t2]))
             triangle = Polygon(LineString([t1, ps, t3]))
             a = pred_poly_by_line(LineString([t1, t2]), polygon, graph)
+            a = insert_between(Point(ps), (t1, t2), a)
             b = plr_1.union(triangle)
             c = pll_1.difference(triangle).difference(a)
             a = Partition(polygon=a, sites={})
@@ -601,11 +747,28 @@ def nonconvex_divide(polygon: Polygon,
             c = Partition(polygon=c,
                           sites=difference_by_key(sites,
                                                   first_partition.sites))
-            return [b, a, c]
+            original_polygon = polygon
+            polygon = insert_between(point=Point(ps),
+                                     vertices=(t1, t2),
+                                     polygon=polygon)
+            graph = nx.relabel_nodes(graph, {original_polygon: polygon})
+            graph = add_point_to_neighbor(point=Point(ps),
+                                          vertices=(t1, t2),
+                                          polygon=polygon,
+                                          graph=graph)
+            return [b, a, c], graph, next_neighbor(polygon, graph)
     else:
         t = midpoint(LineString([vertices_and_sites[-2],
                                  vertices_and_sites[0]]))
         line = LineString([t, first_site_point])
+        original_polygon = polygon
+        polygon = Polygon([*polygon.exterior.coords[:-1], t])
+        graph = nx.relabel_nodes(graph, {original_polygon: polygon})
+        graph = add_point_to_neighbor(point=Point(t),
+                                      vertices=(vertices_and_sites[-2],
+                                                vertices_and_sites[0]),
+                                      polygon=polygon,
+                                      graph=graph)
         plr_1 = plr(polygon=polygon,
                     line=line,
                     graph=graph)
@@ -618,7 +781,9 @@ def nonconvex_divide(polygon: Polygon,
                                     sites=plr_1_sites)
         pll_1_partition = Partition(polygon=pll_1,
                                     sites=pll_1_sites)
-        return [pll_1_partition, plr_1_partition]
+        return ([pll_1_partition, plr_1_partition],
+                graph,
+                next_neighbor(polygon, graph))
 
 
 def get_first_partition_for_nonconvex(polygon: Polygon,
@@ -632,9 +797,9 @@ def get_first_partition_for_nonconvex(polygon: Polygon,
     but we also have to take into account predecessors
     """
     lines = list(map(LineString, zip(repeat(start_point), endpoints)))
-    plrs = map(plr, repeat(polygon), lines, repeat(graph))
-    right_sites_per_vertex = sites_per_vertex(endpoints, sites)
-    partitions = map(Partition, right_sites_per_vertex, plrs)
+    plrs = list(map(plr, repeat(polygon), lines, repeat(graph)))
+    right_sites_per_vertex = list(sites_per_vertex(endpoints, sites))
+    partitions = list(map(Partition, right_sites_per_vertex, plrs))
     first_has_enough_area = compose(has_enough_area, itemgetter(0))
     return find_if_or_last(first_has_enough_area, zip(partitions, lines))
 
@@ -699,6 +864,7 @@ def bisection_search_w_point(*,
     :param area_tolerance: valid difference between `area_requirement`
     and obtained value
     :param max_iterations_count: if exceeded, will raise an error
+    :param graph: input graph
     :return: right and left parts of the input polygon
     """
     polygon_coordinates = list(polygon.exterior.coords)
@@ -736,6 +902,8 @@ def bisection_search_w_point(*,
     if plr_0.area > area_requirement < plr_1.area:
         return endpoint_1
 
+    previous_area = 0
+
     # standard bisection search
     for _ in range(max_iterations_count):
         endpoint = midpoint(search_line)
@@ -745,6 +913,12 @@ def bisection_search_w_point(*,
         polygon_coordinates.insert(start_search_index + 1, endpoint)
         polygon = Polygon(polygon_coordinates)
         plr_ = plr(polygon, division_line, graph)
+        plr_area = plr_.area
+        # this can happen when Plr is attached
+        # with the last point of search_line
+        if plr_area == previous_area:
+            return search_line.boundary[1]
+        previous_area = plr_area
         if math.isclose(plr_.area,
                         area_requirement,
                         rel_tol=area_tolerance):
@@ -792,7 +966,9 @@ def plr(polygon: Polygon,
     pred_polys_from_endpoint = map(pred_poly,
                                    predecessors_with_endpoint,
                                    repeat(graph))
-    return unary_union([predecessors_and_polygon, *pred_polys_from_endpoint])
+    resulting_polygon = unary_union([predecessors_and_polygon,
+                                     *pred_polys_from_endpoint])
+    return resulting_polygon if resulting_polygon.area > 1e-16 else Polygon()
 
 
 def get_original_node(node: Polygon,
@@ -957,6 +1133,8 @@ def prepend_partitions(partitions: Iterable[Partition],
     if node_to_attach_to is not None:
         new_edges = zip(new_nodes, repeat(node_to_attach_to))
         new_graph.add_edges_from(chain(new_edges, graph.edges))
+    else:
+        new_graph.add_edges_from(graph.edges)
 
     # copy node attributes:
     for node in graph:
@@ -968,15 +1146,16 @@ def prepend_partitions(partitions: Iterable[Partition],
     for partition in not_empty_partitions:
         new_graph.nodes[partition.polygon].update(partition.sites)
 
-    if node_to_attach_to is None:
-        return new_graph
+    if node_to_attach_to is not None:
+        # add new edge attributes:
+        for partition in not_empty_partitions:
+            new_edge = partition.polygon, node_to_attach_to
+            touching_edges = touching_sides(*new_edge)
+            if touching_edges is not None:
+                new_graph.edges[new_edge]['side'] = touching_edges[0]
 
-    # add new edge attributes:
-    for partition in not_empty_partitions:
-        new_edge = partition.polygon, node_to_attach_to
-        touching_edges = touching_sides(*new_edge)
-        if touching_edges is not None:
-            new_graph.edges[new_edge]['side'] = touching_edges[0]
+    if node_to_attach_to is None:
+        node_to_attach_to = first(new_graph)
     # assign empty partitions' sites to their successor:
     for partition in empty_parts:
         new_graph.nodes[node_to_attach_to].update(partition.sites)
@@ -997,9 +1176,11 @@ def prepend_partitions_inline(partitions: Iterable[Partition],
 
     new_graph.add_nodes_from(chain(new_nodes, graph.nodes))
 
-    if node_to_attach_to is not None:
-        new_edges = pairwise(chain(new_nodes, [node_to_attach_to]))
-        new_graph.add_edges_from(chain(new_edges, graph.edges))
+    new_edges = (pairwise(new_nodes)
+                 if node_to_attach_to is None
+                 else pairwise(chain(new_nodes, [node_to_attach_to])))
+    new_edges = list(new_edges)
+    new_graph.add_edges_from(chain(new_edges, graph.edges))
 
     # copy node attributes:
     for node in graph:
@@ -1011,15 +1192,15 @@ def prepend_partitions_inline(partitions: Iterable[Partition],
     for partition in new_parts:
         new_graph.nodes[partition.polygon].update(partition.sites)
 
-    if node_to_attach_to is None:
-        return new_graph
-
     # add new edge attributes:
-    new_edges = pairwise(chain(new_nodes, [node_to_attach_to]))
     for new_edge in new_edges:
         touching_edges = touching_sides(*new_edge)
         if touching_edges is not None:
             new_graph.edges[new_edge]['side'] = touching_edges[0]
+
+    if node_to_attach_to is None:
+        return new_graph
+
     # assign empty partitions' sites to their successor:
     for partition in empty_parts:
         new_graph.nodes[node_to_attach_to].update(partition.sites)
@@ -1091,3 +1272,193 @@ def find_sites(polygon: Polygon,
     is_point_in_polygon = compose(polygon.intersects, itemgetter(0))
     sites_in_polygon = filter(is_point_in_polygon, sites.items())
     return dict(sites_in_polygon)
+
+
+def divide_on_the_go(graph: nx.Graph,
+                     requirements: List[float],
+                     with_gradual_search: bool = False
+                     ) -> Iterator[Tuple[Polygon, Tuple[Point, float]]]:
+    """
+    Splits a polygon defined by the graph
+    by assigning sites (in the same order as given) on the go
+    """
+    graph = graph.copy()
+    requirements = iter(requirements)
+
+    area_incomplete_polygons = defaultdict(list)
+    pseudo_sites_relations = {}
+
+    assigned_sites_locations = set()
+
+    graph_iterator = iter(graph)
+    while True:
+        if not graph:
+            return
+        try:
+            polygon: Polygon = next(graph_iterator)
+        except StopIteration:
+            return
+        sites: SitesType = graph.nodes[polygon]
+        if not sites:
+            neighbor = next_neighbor(polygon, graph=graph)
+            if neighbor is None:
+                site_point = find_free_point(polygon, assigned_sites_locations)
+            else:
+                edge = graph[polygon][neighbor]['side']
+                furthest_segment = max(segments(polygon.exterior),
+                                       key=edge.distance)
+                site_point = Point(midpoint(furthest_segment))
+            try:
+                sites = {site_point: next(requirements)}
+                assigned_sites_locations.add(site_point)
+            except StopIteration:
+                continue
+        pred_polygons = pred_polys(polygon, graph=graph)
+        pred_polygon = unary_union(pred_polygons)
+        if is_area_complete(pred_polygon, sites=sites):
+            if len(sites) == 1:
+                graph.remove_nodes_from(pred_polygons)
+                site_point, requirement = first(sites.items())
+                if site_point not in pseudo_sites_relations:
+                    yield (pred_polygon, *sites.items())
+                else:
+                    original_site = pseudo_sites_relations[site_point]
+                    point, requirement = first(original_site.items())
+                    # TODO: should it be pred_polygons also
+                    all_related_polygons = [*area_incomplete_polygons[point],
+                                            *pred_polygons]
+                    resulting_polygon = unary_union(all_related_polygons)
+                    yield resulting_polygon, (point, requirement)
+            else:
+                neighbor = next_neighbor(polygon, graph=graph)
+                graph = update_graph(polygon=polygon,
+                                     sites=sites,
+                                     edge=None,
+                                     neighbor=neighbor,
+                                     graph=graph)
+        elif is_area_incomplete(pred_polygon, sites=sites):
+            neighbor = next_neighbor(polygon, graph=graph)
+            edge = graph[polygon][neighbor]['side']
+            if len(sites) == 1:
+                site_point, requirement = first(sites.items())
+                site_point, initial_requirement = first(
+                    pseudo_sites_relations.get(site_point, sites).items())
+                area_incomplete_polygons[site_point].append(pred_polygon)
+                graph.remove_nodes_from(pred_polygons)
+                pseudo_requirement = requirement - pred_polygon.area
+                pseudo_site_point = Point(midpoint(edge))
+                pseudo_sites_relations[pseudo_site_point] = (
+                    {site_point: initial_requirement})
+                graph.nodes[neighbor].update(
+                    {pseudo_site_point: pseudo_requirement})
+            else:
+                graph = update_graph(polygon=polygon,
+                                     sites=sites,
+                                     edge=edge,
+                                     neighbor=neighbor,
+                                     graph=graph)
+        else:
+            neighbor = next_neighbor(polygon, graph=graph)
+            edge = (None if neighbor is None
+                    else graph[polygon][neighbor]['side'])
+            graph = update_graph(polygon=polygon,
+                                 sites=sites,
+                                 edge=edge,
+                                 neighbor=neighbor,
+                                 graph=graph,
+                                 with_gradual_search=with_gradual_search)
+        graph_iterator = iter(graph)
+
+
+def find_free_point(polygon: Polygon,
+                    taken_points: Set[Point]) -> Point:
+    vertices = map(Point, polygon.exterior.coords)
+    for point in vertices:
+        if point not in taken_points:
+            return point
+    raise ValueError("Couldn't find a free vertex for a site")
+
+
+def gradual_search(polygon: Polygon,
+                   sites: SitesType,
+                   edge: LineString,
+                   *,
+                   tolerance: float = 1e-4,
+                   max_iterations_count: int = 10 ** 8) -> List[Partition]:
+    """
+    Instead of rotating a line by vertices,
+    it moves a line to/from the edge to the next neighbor.
+    """
+    if not polygon.exterior.is_ccw:
+        raise ValueError("Polygon division is implemented only for polygons "
+                         "oriented counter-clockwise")
+    if len(sites) != 1:
+        raise ValueError("This function is only for partitions with 1 site")
+    site_point, requirement = first(sites.items())
+    if requirement == 0 or requirement >= polygon.area:
+        raise ValueError(f"Invalid requirement: {requirement} "
+                         f"for an area {polygon.area}")
+    edges_with_site = [segment for segment in segments(polygon.exterior)
+                       if site_point.touches(segment)]
+    if edge is None:
+        furthest_edge = edges_with_site[0]
+        edge = max(segments(polygon.exterior), key=furthest_edge.distance)
+    else:
+        furthest_edge = max(edges_with_site, key=edge.distance)
+    get_rotating_line = left.applier(rotating_splitter,
+                                     source_line=furthest_edge,
+                                     target_line=LineString(edge.coords[::-1]),
+                                     length=polygon.exterior.length)
+    f0, f1 = 0, 1
+    for _ in range(max_iterations_count):
+        f = f0 + (f1 - f0) / 2
+        splitter = get_rotating_line(f)
+        right_polygon, left_polygon = right_left_parts(polygon, splitter)
+        right_polygon = remove_duplicate_points(snap(right_polygon,
+                                                     polygon.exterior.coords))
+        left_polygon = remove_duplicate_points(snap(left_polygon,
+                                                    polygon.exterior.coords))
+        if math.isclose(right_polygon.area,
+                        requirement,
+                        rel_tol=tolerance):
+            right_partition = Partition(polygon=right_polygon,
+                                        sites=sites)
+            left_partition = Partition(polygon=left_polygon,
+                                       sites={})
+            return [right_partition, left_partition]
+        elif right_polygon.area > requirement:
+            f1 = f
+        else:
+            f0 = f
+    raise ValueError("Couldn't find appropriate partition of the polygon")
+
+
+def snap(polygon: Polygon,
+         snap_points: Iterable[Tuple[float, float]],
+         min_dist: float = 1e-9) -> Polygon:
+    """
+    Used to remove points from newly created polygons
+    that are too close to original vertices
+    """
+    if polygon.is_empty:
+        return polygon
+    coords_to_return = []
+    for new_point in polygon.exterior.coords:
+        for snap_point in snap_points:
+            if (Point(new_point).distance(Point(snap_point)) < min_dist
+                    and snap_point not in coords_to_return):
+                coords_to_return.append(snap_point)
+                break
+        else:
+            coords_to_return.append(new_point)
+    return Polygon(coords_to_return)
+
+
+def remove_duplicate_points(polygon: Polygon) -> Polygon:
+    if polygon.is_empty:
+        return polygon
+    coords_to_return = []
+    for coord in polygon.exterior.coords:
+        if coord not in coords_to_return:
+            coords_to_return.append(coord)
+    return Polygon(coords_to_return)
