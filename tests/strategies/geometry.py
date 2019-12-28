@@ -14,7 +14,6 @@ from hypothesis.strategies import (SearchStrategy,
                                    builds,
                                    integers,
                                    lists,
-                                   sampled_from,
                                    sets,
                                    tuples)
 from lz.iterating import interleave

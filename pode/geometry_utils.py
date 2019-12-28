@@ -1,6 +1,8 @@
 from itertools import (chain,
                        combinations,
                        product)
+from math import (atan2,
+                  tan)
 from operator import itemgetter
 from typing import (Callable,
                     Iterable,
@@ -16,13 +18,20 @@ from lz.functional import compose
 from lz.iterating import (flatten,
                           pairwise)
 from matplotlib.tri.triangulation import Triangulation
+from shapely.affinity import (rotate,
+                              scale,
+                              translate)
 from shapely.geometry import (LineString,
                               LinearRing,
-                              Polygon)
+                              MultiPoint,
+                              Point,
+                              Polygon,
+                              asMultiPoint)
 from shapely.geometry.base import BaseGeometry
 from shapely.ops import split
 
-from pode.utils import starfilter
+from pode.utils import (next_index,
+                        starfilter)
 
 
 def segments(ring: LinearRing) -> Iterator[LineString]:
@@ -35,6 +44,12 @@ def right_left_parts(polygon: Polygon,
                      line: LineString) -> Tuple[Polygon, Polygon]:
     """Splits polygon by a line and returns two parts: right and left"""
     part, other_part = safe_split(polygon, line)
+    # sometimes due to precision errors a site point lying on a polygon's
+    # segment can be lying a bit inside of it which will make the
+    # polygon nonconvex:
+    if (part.area < 1e-16 and is_on_the_left(part, line)
+            and is_on_the_left(other_part, line)):
+        return part, other_part
     if is_on_the_left(part, line):
         return other_part, part
     return part, other_part
@@ -58,7 +73,6 @@ def is_on_the_left(polygon: Polygon,
     return ring.is_ccw
 
 
-# TODO: add overlapping check
 def is_on_the_right(geometry: BaseGeometry,
                     line: LineString) -> bool:
     """
@@ -74,6 +88,11 @@ def is_on_the_right(geometry: BaseGeometry,
 
 def safe_split(polygon: Polygon,
                line: LineString) -> Tuple[Polygon, Polygon]:
+    """
+    Splits the polygon by the given line and returns resulting parts.
+    If splitting resulted in only one polygon, it is returned first,
+    and an empty polygon is returned after it.
+    """
     parts = tuple(split(polygon, line))
     if len(parts) == 1:
         return polygon, Polygon()
@@ -174,3 +193,106 @@ def triangulation(polygon: Polygon) -> List[Polygon]:
     triangles_points_indices = triangulation_object.triangles
     triangles_coords = coords_set[triangles_points_indices]
     return list(map(Polygon, triangles_coords))
+
+
+def points_range(count: int,
+                 start: Point,
+                 end: Point) -> MultiPoint:
+    """Returns equidistant points (`points_count` > 1) on the line"""
+    xy = np.linspace(*start.coords, *end.coords, count)
+    return asMultiPoint(xy)
+
+
+def join_to_convex(polygons: Iterable[Polygon]) -> Iterator[Polygon]:
+    """Joins polygons to form convex parts of greater size"""
+    polygons = list(polygons)
+    initial_polygon = polygons.pop()
+    while True:
+        resulting_polygon = initial_polygon
+        for index, polygon in enumerate(iter(polygons)):
+            union = resulting_polygon.union(polygon)
+            if isinstance(union, Polygon) and is_convex(union):
+                polygons.pop(index)
+                resulting_polygon = union
+        if resulting_polygon is not initial_polygon:
+            initial_polygon = resulting_polygon
+            continue
+        yield resulting_polygon
+        if not polygons:
+            return
+        initial_polygon = polygons.pop()
+
+
+def is_convex(polygon: Polygon) -> bool:
+    return not polygon.interiors and polygon.convex_hull.equals(polygon)
+
+
+def slope_intercept(line: LineString) -> Tuple[float, float]:
+    slope = slope_angle(line)
+    start, end = line.boundary
+    intercept = start.y - tan(slope) * start.x
+    return slope, intercept
+
+
+def slope_angle(line: LineString) -> float:
+    start, end = line.boundary
+    return atan2(end.y - start.y, end.x - start.x)
+
+
+def rotating_splitter(fraction: float,
+                      source_line: LineString,
+                      target_line: LineString,
+                      length: float) -> LineString:
+    scale_factor_by_axis = length / source_line.length
+    source_line_slope, source_line_intercept = slope_intercept(source_line)
+    target_line_slope, target_line_intercept = slope_intercept(target_line)
+    line = scale(source_line,
+                 xfact=scale_factor_by_axis,
+                 yfact=scale_factor_by_axis)
+    if source_line_slope == target_line_slope:
+        source_line_center = source_line.centroid
+        target_line_center = target_line.centroid
+        dx = (target_line_center.x - source_line_center.x) * fraction
+        dy = (target_line_center.y - source_line_center.y) * fraction
+        return translate(line,
+                         xoff=dx,
+                         yoff=dy)
+    # checking if the slopes have different signs in order to get a correct
+    # splitter
+    resulting_slope = (source_line_slope + fraction * (target_line_slope
+                                                       - source_line_slope))
+    if source_line_slope * target_line_slope < 0 and resulting_slope != 0:
+        resulting_slope = - 1 / resulting_slope
+    rotation_origin = rays_intersection(line_slope=tan(source_line_slope),
+                                        line_intercept=source_line_intercept,
+                                        other_slope=tan(target_line_slope),
+                                        other_intercept=target_line_intercept)
+    return rotate(line,
+                  angle=resulting_slope - source_line_slope,
+                  origin=rotation_origin,
+                  use_radians=True)
+
+
+def rays_intersection(line_slope: float,
+                      line_intercept: float,
+                      other_slope: float,
+                      other_intercept: float) -> Point:
+    if line_slope == other_slope:
+        raise ValueError("Parallel lines do not intersect")
+    dbdk = (other_intercept - line_intercept) / (other_slope - line_slope)
+    return Point(-dbdk, -line_slope * dbdk + line_intercept)
+
+
+def insert_between(point: Point,
+                   vertices: Iterable[Point],
+                   polygon: Polygon) -> Polygon:
+    """Inserts point between the vertices of polygon's exterior"""
+    polygon_edges = segments(polygon.exterior)
+    line_to_split = LineString(vertices)
+    index = next_index(polygon_edges, line_to_split.equals)
+    coords = list(polygon.exterior.coords)
+    return Polygon([*coords[:index + 1], to_tuple(point), *coords[index + 1:]])
+
+
+def to_tuple(point: Point) -> Tuple[float, float]:
+    return point.x, point.y
