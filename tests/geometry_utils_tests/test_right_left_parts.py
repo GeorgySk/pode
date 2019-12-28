@@ -6,17 +6,17 @@ from shapely.geometry import (LineString,
                               Polygon)
 
 from pode.geometry_utils import right_left_parts
-from tests.strategies import (lines,
-                              polygons)
+from tests.strategies import (convex_polygons,
+                              segments)
 
 
-@given(polygon=polygons,
-       line=lines)
+@given(polygon=convex_polygons,
+       segment=segments)
 def test_area(polygon: Polygon,
-              line: LineString) -> None:
+              segment: LineString) -> None:
     note(f"Polygon: {polygon.wkt}\n"
-         f"LineString: {line.wkt}")
-    part, other_part = right_left_parts(polygon, line)
+         f"LineString: {segment.wkt}")
+    part, other_part = right_left_parts(polygon, segment)
     assert isclose(polygon.area,
                    part.area + other_part.area,
                    rel_tol=1e-08)  # smaller tolerance can result in errors

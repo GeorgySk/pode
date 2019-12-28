@@ -1,4 +1,5 @@
-from .geometry import (disjoint_lines,
+from .geometry import (convex_polygons,
+                       disjoint_lines,
                        disjoint_polygons_lists,
                        finite_floats,
                        linear_rings,

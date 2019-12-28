@@ -50,18 +50,18 @@ from shapely.geometry.base import (BaseGeometry,
 from shapely.geometry.polygon import orient
 from shapely.ops import unary_union
 
-from geometry_utils import (to_convex_parts,
-                            join_to_convex,
-                            to_graph)
-from pode.geometry_utils import (rotating_splitter,
-                                 insert_between,
-                                 to_tuple)
 from .geometry_utils import (are_touching,
+                             insert_between,
                              is_on_the_right,
+                             join_to_convex,
                              midpoint,
                              right_left_parts,
                              right_part,
+                             rotating_splitter,
                              segments,
+                             to_convex_parts,
+                             to_graph,
+                             to_tuple,
                              touching_sides)
 from .utils import (cached_sum,
                     difference_by_key,
