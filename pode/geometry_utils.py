@@ -65,30 +65,17 @@ right_part: Callable[[Polygon, LineString], Polygon] = compose(
 right_part.__doc__ = "Splits polygon by a line and returns the right part"
 
 
-def is_on_the_left(polygon: Polygon,
+def is_on_the_left(geometry: BaseGeometry,
                    line: LineString) -> bool:
     """
-    Determines if the polygon is on the left side of the line
-    according to:
-    https://stackoverflow.com/questions/50393718/determine-the-left-and-right-side-of-a-split-shapely-geometry
-    Doesn't work for 3D geometries:
-    https://github.com/Toblerity/Shapely/issues/709
-    """
-    ring = LinearRing(chain(line.coords, polygon.centroid.coords))
-    return ring.is_ccw
-
-
-def is_on_the_right(geometry: BaseGeometry,
-                    line: LineString) -> bool:
-    """
-    Determines if the geometry object is on the right side of the line
+    Determines if the geometry is on the left side of the line
     according to:
     https://stackoverflow.com/questions/50393718/determine-the-left-and-right-side-of-a-split-shapely-geometry
     Doesn't work for 3D geometries:
     https://github.com/Toblerity/Shapely/issues/709
     """
     ring = LinearRing(chain(line.coords, geometry.centroid.coords))
-    return not ring.is_ccw
+    return ring.is_ccw
 
 
 def safe_split(polygon: Polygon,

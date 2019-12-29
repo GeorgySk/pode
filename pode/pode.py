@@ -52,7 +52,7 @@ from shapely.ops import unary_union
 
 from .geometry_utils import (are_touching,
                              insert_between,
-                             is_on_the_right,
+                             is_on_the_left,
                              join_to_convex,
                              midpoint,
                              right_left_parts,
@@ -1009,7 +1009,7 @@ def rightmost_highest(polygon: Polygon) -> Tuple[float, float]:
 def edges_on_the_right(polygon: Polygon,
                        line: LineString) -> Iterator[LineString]:
     for segment in segments(polygon.exterior):
-        if is_on_the_right(segment, line):
+        if not is_on_the_left(segment, line):
             yield segment
 
 
