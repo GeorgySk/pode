@@ -23,10 +23,8 @@ from shapely.affinity import (rotate,
                               translate)
 from shapely.geometry import (LineString,
                               LinearRing,
-                              MultiPoint,
                               Point,
-                              Polygon,
-                              asMultiPoint)
+                              Polygon)
 from shapely.geometry.base import BaseGeometry
 from shapely.ops import split
 
@@ -185,14 +183,6 @@ def triangulation(polygon: Polygon) -> List[Polygon]:
     triangles_points_indices = triangulation_object.triangles
     triangles_coords = coords_set[triangles_points_indices]
     return list(map(Polygon, triangles_coords))
-
-
-def points_range(count: int,
-                 start: Point,
-                 end: Point) -> MultiPoint:
-    """Returns equidistant points (`points_count` > 1) on the line"""
-    xy = np.linspace(*start.coords, *end.coords, count)
-    return asMultiPoint(xy)
 
 
 def join_to_convex(polygons: Iterable[Polygon]) -> Iterator[Polygon]:
