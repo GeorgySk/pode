@@ -21,10 +21,12 @@ from matplotlib.tri.triangulation import Triangulation
 from shapely.affinity import (rotate,
                               scale,
                               translate)
-from shapely.geometry import (LineString,
+from shapely.geometry import (GeometryCollection,
+                              LineString,
                               LinearRing,
                               Point,
-                              Polygon)
+                              Polygon,
+                              MultiPolygon)
 from shapely.geometry.base import BaseGeometry
 from shapely.ops import split
 
@@ -158,7 +160,15 @@ def to_convex_parts(polygon: Polygon) -> Iterator[Polygon]:
     Splits a polygon to convex parts.
     Implemented by simple Delaunay triangulation.
     """
-    yield from filter(polygon.contains, triangulation(polygon))
+    parts = triangulation(polygon)
+    intersections = map(polygon.intersection, parts)
+    for intersection in intersections:
+        if isinstance(intersection, Polygon):
+            yield intersection
+        elif isinstance(intersection, (GeometryCollection, MultiPolygon)):
+            for part in intersection.geoms:
+                if isinstance(part, Polygon):
+                    yield part
 
 
 def triangulation(polygon: Polygon) -> List[Polygon]:
