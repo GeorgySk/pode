@@ -7,9 +7,6 @@ import pode
 
 project_base_url = 'https://github.com/LostFan123/pode/'
 
-setup_requires = [
-    'pytest-runner>=4.2',
-]
 install_requires = Path('requirements.txt').read_text()
 tests_require = Path('requirements-tests.txt').read_text()
 
@@ -24,6 +21,5 @@ setup(name='pode',
       url=project_base_url,
       download_url=project_base_url + 'archive/master.zip',
       python_requires='>=3.6',
-      setup_requires=setup_requires,
       install_requires=install_requires,
       tests_require=tests_require)
