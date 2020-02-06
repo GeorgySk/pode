@@ -114,44 +114,14 @@ def to_disjoint_lines(points: List[Point]) -> Tuple[LineString, LineString]:
 disjoint_lines = builds(to_disjoint_lines, to_aligned_points(4))
 disjoint_lines = disjoint_lines.filter(have_no_close_points)
 
-three_unique_coordinates_lists = lists(coordinates,
-                                       min_size=3,
-                                       max_size=3,
-                                       unique=True)
-triangles = (three_unique_coordinates_lists
-             .filter(form_object_with_area)
-             .map(Polygon))
-
 three_or_more_unique_coordinates_lists = lists(coordinates,
                                                min_size=3,
                                                max_size=MAX_ITERABLES_SIZE,
                                                unique=True)
 linear_rings = three_or_more_unique_coordinates_lists.map(LinearRing)
 
-circles = builds(Point.buffer, points, positive_floats)
-
-straight_rectangles = (builds(box, *repeat(finite_floats, 4))
-                       .filter(form_object_with_area))
-rectangles = builds(rotate, straight_rectangles, angles)
-
-convex_polygons = triangles | circles | rectangles
-
-
-def l_shaped(xs: Set[float],
-             ys: Set[float],
-             angle: float):
-    x0, x1, x2 = sorted(xs)
-    y0, y1, y2 = sorted(ys)
-    vertical = box(x0, y0, x1, y2)
-    horizontal = box(x1, y0, x2, y1)
-    polygon = vertical.union(horizontal)
-    return rotate(polygon, angle)
-
-
-l_shaped_polygons = builds(l_shaped,
-                           xs=sets(finite_floats, min_size=3, max_size=3),
-                           ys=sets(finite_floats, min_size=3, max_size=3),
-                           angle=angles)
+convex_polygons = builds(Polygon, planar.convex_contours(finite_floats))
+convex_polygons = convex_polygons.filter(has_no_close_points)
 
 
 def window(xs: Set[float],
@@ -170,26 +140,8 @@ window_polygons = builds(window,
                          ys=sets(finite_floats, min_size=4, max_size=4),
                          angle=angles)
 
-
-def star(rs: Set[float],
-         n: int):
-    r0, r1 = rs
-    delta_angle = 360 / n
-    angles0 = [delta_angle * i for i in range(n)]
-    angles1 = [angle + delta_angle / 2 for angle in angles0]
-    angles0 = map(radians, angles0)
-    angles1 = map(radians, angles1)
-    coords0 = ((r0 * cos(angle), r0 * sin(angle)) for angle in angles0)
-    coords1 = ((r1 * cos(angle), r1 * sin(angle)) for angle in angles1)
-    coords = interleave([coords0, coords1])
-    return Polygon(coords)
-
-
-star_polygons = builds(star,
-                       rs=sets(positive_floats, min_size=2, max_size=2),
-                       n=polygon_side_counts)
-
-nonconvex_polygons = l_shaped_polygons | window_polygons | star_polygons
+nonconvex_polygons = builds(Polygon, planar.concave_contours(finite_floats))
+nonconvex_polygons |= window_polygons
 nonconvex_polygons = nonconvex_polygons.filter(has_no_close_points)
 
 polygons = convex_polygons | nonconvex_polygons
