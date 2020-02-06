@@ -24,9 +24,9 @@ from shapely.affinity import (rotate,
 from shapely.geometry import (GeometryCollection,
                               LineString,
                               LinearRing,
+                              MultiPolygon,
                               Point,
-                              Polygon,
-                              MultiPolygon)
+                              Polygon)
 from shapely.geometry.base import BaseGeometry
 from shapely.ops import split
 
@@ -45,10 +45,15 @@ def segments(ring: LinearRing) -> Iterator[LineString]:
 
 def right_left_parts(polygon: Polygon,
                      line: LineString) -> Tuple[Polygon, Polygon]:
-    """Splits polygon by a line and returns two parts: right and left"""
+    """
+    Splits polygon by a line and returns two parts: right and left.
+    The parts will not necessarily lie completely inside the parent
+    polygon due to precision errors.
+    """
     if len(line.coords) != 2:
         raise ValueError("Only lines consisting of 2 points are supported")
-    part, other_part = safe_split(polygon, line)
+    part, *other_parts = split(polygon, line)
+    other_part = other_parts[0] if other_parts else Polygon()
     # sometimes due to precision errors a site point lying on a polygon's
     # segment can be lying a bit inside of it which will make the
     # polygon nonconvex:
@@ -76,19 +81,6 @@ def is_on_the_left(geometry: BaseGeometry,
     """
     ring = LinearRing(chain(line.coords, geometry.centroid.coords))
     return ring.is_ccw
-
-
-def safe_split(polygon: Polygon,
-               line: LineString) -> Tuple[Polygon, Polygon]:
-    """
-    Splits the polygon by the given line and returns resulting parts.
-    If splitting resulted in only one polygon, it is returned first,
-    and an empty polygon is returned after it.
-    """
-    parts = tuple(split(polygon, line))
-    if len(parts) == 1:
-        return polygon, Polygon()
-    return parts
 
 
 def midpoint(line: LineString) -> Tuple[float, float]:
@@ -161,8 +153,7 @@ def to_convex_parts(polygon: Polygon) -> Iterator[Polygon]:
     Implemented by simple Delaunay triangulation.
     """
     parts = triangulation(polygon)
-    intersections = map(polygon.intersection, parts)
-    for intersection in intersections:
+    for intersection in map(polygon.intersection, parts):
         if isinstance(intersection, Polygon):
             yield intersection
         elif isinstance(intersection, (GeometryCollection, MultiPolygon)):
