@@ -16,6 +16,7 @@ from hypothesis.strategies import (SearchStrategy,
                                    lists,
                                    sets,
                                    tuples)
+from hypothesis_geometry import planar
 from lz.iterating import interleave
 from shapely.affinity import rotate
 from shapely.geometry import (LinearRing,
@@ -47,10 +48,10 @@ polygon_side_counts = integers(min_value=3,
 finite_floats = to_finite_floats()
 positive_floats = to_finite_floats(min_value=ABS_TOL,
                                    exclude_min=True)
-coordinates = tuples(finite_floats, finite_floats)
+coordinates = planar.points(finite_floats)
 angles = to_finite_floats(min_value=-360,
                           max_value=360)
-points = builds(Point, finite_floats, finite_floats)
+points = builds(Point, coordinates)
 segments = builds(LineString, lists(coordinates,
                                     min_size=2,
                                     max_size=2,
