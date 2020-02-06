@@ -24,10 +24,6 @@ is_close = partial(math.isclose,
 no_trim_wkt = partial(wkt.dumps, trim=False)
 
 
-def form_object_with_area(vertices: Iterable[Tuple[float, float]]) -> bool:
-    return Polygon(vertices).area > 0
-
-
 @singledispatch
 def to_coords(geometry: BaseGeometry) -> Iterator[Tuple[float, float]]:
     yield from geometry.coords

@@ -1,9 +1,6 @@
 from itertools import (product,
                        repeat,
                        starmap)
-from math import (cos,
-                  radians,
-                  sin)
 from typing import (List,
                     Sequence,
                     Set,
@@ -17,7 +14,6 @@ from hypothesis.strategies import (SearchStrategy,
                                    sets,
                                    tuples)
 from hypothesis_geometry import planar
-from lz.iterating import interleave
 from shapely.affinity import rotate
 from shapely.geometry import (LinearRing,
                               LineString,
@@ -31,7 +27,6 @@ from tests.configs import (ABS_TOL,
 from tests.strategies.common import (fractions,
                                      to_finite_floats)
 from tests.utils import (are_sparse,
-                         form_object_with_area,
                          has_no_close_points,
                          have_no_close_points)
 
@@ -43,19 +38,13 @@ iterable_sizes = integers(min_value=0,
                           max_value=MAX_ITERABLES_SIZE)
 grid_side_sizes = integers(min_value=0,
                            max_value=MAX_GRID_SIDE_SIZE)
-polygon_side_counts = integers(min_value=3,
-                               max_value=MAX_ITERABLES_SIZE)
 finite_floats = to_finite_floats()
 positive_floats = to_finite_floats(min_value=ABS_TOL,
                                    exclude_min=True)
 coordinates = planar.points(finite_floats)
 angles = to_finite_floats(min_value=-360,
                           max_value=360)
-points = builds(Point, coordinates)
-segments = builds(LineString, lists(coordinates,
-                                    min_size=2,
-                                    max_size=2,
-                                    unique=True))
+segments = builds(LineString, planar.segments(finite_floats))
 # too small segments conflict with precision errors
 segments = segments.filter(has_no_close_points)
 
@@ -114,13 +103,13 @@ def to_disjoint_lines(points: List[Point]) -> Tuple[LineString, LineString]:
 disjoint_lines = builds(to_disjoint_lines, to_aligned_points(4))
 disjoint_lines = disjoint_lines.filter(have_no_close_points)
 
-three_or_more_unique_coordinates_lists = lists(coordinates,
-                                               min_size=3,
-                                               max_size=MAX_ITERABLES_SIZE,
-                                               unique=True)
-linear_rings = three_or_more_unique_coordinates_lists.map(LinearRing)
+linear_rings = builds(LinearRing, planar.contours(finite_floats,
+                                                  max_size=MAX_ITERABLES_SIZE))
+linear_rings = linear_rings.filter(has_no_close_points)
 
-convex_polygons = builds(Polygon, planar.convex_contours(finite_floats))
+convex_polygons = builds(Polygon,
+                         planar.convex_contours(finite_floats,
+                                                max_size=MAX_ITERABLES_SIZE))
 convex_polygons = convex_polygons.filter(has_no_close_points)
 
 
@@ -140,7 +129,9 @@ window_polygons = builds(window,
                          ys=sets(finite_floats, min_size=4, max_size=4),
                          angle=angles)
 
-nonconvex_polygons = builds(Polygon, planar.concave_contours(finite_floats))
+nonconvex_polygons = builds(
+    Polygon, planar.concave_contours(finite_floats,
+                                     max_size=MAX_ITERABLES_SIZE))
 nonconvex_polygons |= window_polygons
 nonconvex_polygons = nonconvex_polygons.filter(has_no_close_points)
 

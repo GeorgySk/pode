@@ -1,6 +1,5 @@
 from operator import itemgetter
 
-import pytest
 from hypothesis import (given,
                         note)
 from lz.functional import compose
@@ -31,8 +30,6 @@ def test_endpoints(ring: LinearRing) -> None:
     assert lines[0].coords[0] == lines[-1].coords[-1]
 
 
-@pytest.mark.skip(reason="Upstream bug for LinearRing.equals. "
-                         "Fails for rings with overlapping collinear segments")
 @given(linear_rings)
 def test_recreation(ring: LinearRing) -> None:
     lines = list(segments(ring))
