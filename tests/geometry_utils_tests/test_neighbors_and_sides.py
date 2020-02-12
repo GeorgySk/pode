@@ -1,13 +1,16 @@
-from typing import (List,
-                    Iterable)
+from typing import (Iterable,
+                    List)
 
+import pytest
 from hypothesis import (given,
                         note)
 from shapely.geometry import Polygon
 
 from pode.geometry_utils import neighbors_and_sides
 from tests.strategies import (disjoint_polygons_lists,
-                              same_polygons_iterators)
+                              empty_polygons,
+                              nonempty_polygons_lists,
+                              same_nonempty_polygons_iterators)
 from tests.utils import no_trim_wkt
 
 
@@ -17,10 +20,20 @@ def test_disjoint(polygons: List[Polygon]) -> None:
     assert not list(neighbors_and_sides(polygons))
 
 
-@given(same_polygons_iterators)
+@given(same_nonempty_polygons_iterators)
 def test_coinciding(polygons: Iterable[Polygon]) -> None:
     polygons = list(polygons)
     note(f'Polygons: {list(map(no_trim_wkt, polygons))}')
     polygons_count = len(polygons)
     neighbors_count = len(list(neighbors_and_sides(polygons)))
     assert neighbors_count == (polygons_count - 1) * polygons_count // 2
+
+
+@given(empty_polygon=empty_polygons,
+       polygons=nonempty_polygons_lists)
+def test_empty(empty_polygon: Polygon,
+               polygons: List[Polygon]) -> None:
+    polygons = [empty_polygon, *polygons]
+    note(f'Polygons: {list(map(no_trim_wkt, polygons))}')
+    with pytest.raises(ValueError):
+        list(neighbors_and_sides(polygons))

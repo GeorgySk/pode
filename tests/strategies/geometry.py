@@ -15,8 +15,11 @@ from hypothesis.strategies import (SearchStrategy,
                                    tuples)
 from hypothesis_geometry import planar
 from shapely.affinity import rotate
-from shapely.geometry import (LinearRing,
+from shapely.geometry import (GeometryCollection,
                               LineString,
+                              LinearRing,
+                              MultiLineString,
+                              MultiPoint,
                               MultiPolygon,
                               Point,
                               Polygon,
@@ -41,12 +44,16 @@ grid_side_sizes = integers(min_value=0,
 finite_floats = to_finite_floats()
 positive_floats = to_finite_floats(min_value=ABS_TOL,
                                    exclude_min=True)
-coordinates = planar.points(finite_floats)
+
 angles = to_finite_floats(min_value=-360,
                           max_value=360)
 segments = builds(LineString, planar.segments(finite_floats))
-# too small segments conflict with precision errors
-segments = segments.filter(has_no_close_points)
+
+empty_linestrings = builds(LineString)
+non_segments = builds(LineString,
+                      planar.contours(finite_floats,
+                                      min_size=3,
+                                      max_size=MAX_ITERABLES_SIZE))
 
 
 def points_by_distances(line: LineString,
@@ -103,14 +110,14 @@ def to_disjoint_lines(points: List[Point]) -> Tuple[LineString, LineString]:
 disjoint_lines = builds(to_disjoint_lines, to_aligned_points(4))
 disjoint_lines = disjoint_lines.filter(have_no_close_points)
 
-linear_rings = builds(LinearRing, planar.contours(finite_floats,
-                                                  max_size=MAX_ITERABLES_SIZE))
-linear_rings = linear_rings.filter(has_no_close_points)
+empty_linear_rings = builds(LinearRing)
+nonempty_linear_rings = builds(LinearRing,
+                               planar.contours(finite_floats,
+                                               max_size=MAX_ITERABLES_SIZE))
 
 convex_polygons = builds(Polygon,
                          planar.convex_contours(finite_floats,
                                                 max_size=MAX_ITERABLES_SIZE))
-convex_polygons = convex_polygons.filter(has_no_close_points)
 
 
 def window(xs: Set[float],
@@ -135,12 +142,18 @@ nonconvex_polygons = builds(
 nonconvex_polygons |= window_polygons
 nonconvex_polygons = nonconvex_polygons.filter(has_no_close_points)
 
-polygons = convex_polygons | nonconvex_polygons
+empty_polygons = builds(Polygon)
+nonempty_polygons = convex_polygons | nonconvex_polygons
+polygons = empty_polygons | nonempty_polygons
 
-disjoint_polygons_lists = (lists(polygons,
-                                 max_size=MAX_ITERABLES_SIZE)
-                           .filter(are_sparse))
-same_polygons_iterators = builds(repeat, polygons, iterable_sizes)
+polygons_lists = lists(polygons, max_size=MAX_ITERABLES_SIZE)
+nonempty_polygons_lists = lists(polygons,
+                                min_size=1,
+                                max_size=MAX_ITERABLES_SIZE)
+disjoint_polygons_lists = polygons_lists.filter(are_sparse)
+same_nonempty_polygons_iterators = builds(repeat,
+                                          nonempty_polygons,
+                                          iterable_sizes)
 
 
 def polygons_grid(cell_size: Tuple[float, float],
@@ -187,3 +200,14 @@ polygons_grids_and_dimensions = builds(
     grid_shape=tuples(grid_side_sizes, grid_side_sizes),
     origin=tuples(finite_floats, finite_floats),
     angle=angles)
+
+
+def dont_coincide_in_centroid(polygon_and_line: Tuple[Polygon, LineString]
+                              ) -> bool:
+    polygon, line = polygon_and_line
+    return not line.intersects(polygon.centroid)
+
+
+polygons_and_segments = tuples(nonempty_polygons, segments)
+polygons_and_segments_not_passing_through_centroids = (
+    polygons_and_segments.filter(dont_coincide_in_centroid))

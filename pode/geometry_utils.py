@@ -27,7 +27,6 @@ from shapely.geometry import (GeometryCollection,
                               MultiPolygon,
                               Point,
                               Polygon)
-from shapely.geometry.base import BaseGeometry
 from shapely.ops import split
 
 from pode.utils import (next_index,
@@ -39,30 +38,36 @@ def segments(ring: LinearRing) -> Iterator[LineString]:
     Yields consecutive lines from the given ring.
     Doesn't work for degenerate geometries.
     """
+    if ring.is_empty:
+        raise ValueError("Empty ring doesn't have segments")
     pairs = pairwise(ring.coords)
     yield from map(LineString, pairs)
 
 
 def right_left_parts(polygon: Polygon,
-                     line: LineString) -> Tuple[Polygon, Polygon]:
+                     line: LineString,
+                     *,
+                     error: float = 1e-16) -> Tuple[Polygon, Polygon]:
     """
     Splits polygon by a line and returns two parts: right and left.
-    The parts will not necessarily lie completely inside the parent
+    Important notes:
+    1) The parts will not necessarily lie completely inside the parent
     polygon due to precision errors.
+    2) Input polygon can contain three or more collinear points
+    on one segment
+    3) Line ends lie not necessarily on the boundary of the polygon
     """
+    if polygon.is_empty:
+        raise ValueError("Can't split an empty polygon")
     if len(line.coords) != 2:
         raise ValueError("Only lines consisting of 2 points are supported")
     part, *other_parts = split(polygon, line)
     other_part = other_parts[0] if other_parts else Polygon()
-    # sometimes due to precision errors a site point lying on a polygon's
-    # segment can be lying a bit inside of it which will make the
-    # polygon nonconvex:
-    if (part.area < 1e-16 and is_on_the_left(part, line)
-            and is_on_the_left(other_part, line)):
-        return part, other_part
-    if is_on_the_left(part, line):
-        return other_part, part
-    return part, other_part
+    small_part, big_part = sorted((part, other_part), key=Polygon.area.fget)
+    if small_part.area < error:
+        small_part, big_part = Polygon(), polygon
+    return ((small_part, big_part) if is_on_the_left(big_part, line)
+            else (big_part, small_part))
 
 
 right_part: Callable[[Polygon, LineString], Polygon] = compose(
@@ -70,16 +75,29 @@ right_part: Callable[[Polygon, LineString], Polygon] = compose(
 right_part.__doc__ = "Splits polygon by a line and returns the right part"
 
 
-def is_on_the_left(geometry: BaseGeometry,
+def is_on_the_left(polygon: Polygon,
                    line: LineString) -> bool:
     """
-    Determines if the geometry is on the left side of the line
+    Determines if the polygon is on the left side of the line
     according to:
     https://stackoverflow.com/questions/50393718/determine-the-left-and-right-side-of-a-split-shapely-geometry
     Doesn't work for 3D geometries:
     https://github.com/Toblerity/Shapely/issues/709
     """
-    ring = LinearRing(chain(line.coords, geometry.centroid.coords))
+    if any(part.is_empty for part in [polygon, line]):
+        raise ValueError(f"Result is undefined for empty geometry objects.\n"
+                         f"Received polygon: {polygon.wkt}\n"
+                         f"Received line: {line.wkt}")
+    if len(line.coords) != 2:
+        raise ValueError("Lines consisting of more than two points can lead to"
+                         "unexpected results due to the algorithm that "
+                         "can construct an invalid LinearRing")
+    if line.intersects(polygon.centroid):
+        raise ValueError(f"Result is undefined when a line crosses "
+                         f"the polygon's centroid.\n"
+                         f"Received polygon: {polygon.wkt}\n"
+                         f"Received line: {line.wkt}")
+    ring = LinearRing(chain(line.coords, polygon.centroid.coords))
     return ring.is_ccw
 
 
@@ -119,6 +137,11 @@ def neighbors_and_sides(polygons: Iterable[Polygon]
 def touching_sides(polygon: Polygon,
                    other: Polygon) -> Optional[Tuple[LineString, LineString]]:
     """Returns the first found touching sides of two polygons"""
+    if any(geometry.is_empty for geometry in (polygon, other)):
+        raise ValueError(f"It is undefined if an empty geometry "
+                         f"touches any other geometry.\n"
+                         f"Received polygon: {polygon.wkt}\n"
+                         f"other: {other.wkt}")
     sides = segments(polygon.exterior)
     other_sides = segments(other.exterior)
     sides_combinations = product(sides, other_sides)

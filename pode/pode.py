@@ -52,7 +52,6 @@ from shapely.ops import unary_union
 
 from .geometry_utils import (are_touching,
                              insert_between,
-                             is_on_the_left,
                              join_to_convex,
                              midpoint,
                              right_left_parts,
@@ -946,7 +945,7 @@ def plr(polygon: Polygon,
     if right_part_.is_empty:
         predecessors_and_polygon = right_part_
     else:
-        right_edges = edges_on_the_right(right_part_, line)
+        right_edges = segments(right_part_.exterior)
         pred_polys_by_line = [pred_poly_by_line(line=edge,
                                                 polygon=right_part_,
                                                 graph=graph,
@@ -1004,13 +1003,6 @@ def leftmost_lowest(polygon: Polygon) -> Tuple[float, float]:
 
 def rightmost_highest(polygon: Polygon) -> Tuple[float, float]:
     return max(polygon.exterior.coords)
-
-
-def edges_on_the_right(polygon: Polygon,
-                       line: LineString) -> Iterator[LineString]:
-    for segment in segments(polygon.exterior):
-        if not is_on_the_left(segment, line):
-            yield segment
 
 
 def pred_poly_by_line(line: LineString,
