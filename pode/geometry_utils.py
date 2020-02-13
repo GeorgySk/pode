@@ -103,6 +103,8 @@ def is_on_the_left(polygon: Polygon,
 
 def midpoint(line: LineString) -> Tuple[float, float]:
     """Returns coordinates of the middle of the input line"""
+    if line.is_empty:
+        raise ValueError("Can't determine a midpoint of an empty line.")
     return line.interpolate(0.5, normalized=True).coords[0]
 
 

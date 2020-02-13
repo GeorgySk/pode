@@ -15,11 +15,8 @@ from hypothesis.strategies import (SearchStrategy,
                                    tuples)
 from hypothesis_geometry import planar
 from shapely.affinity import rotate
-from shapely.geometry import (GeometryCollection,
-                              LineString,
+from shapely.geometry import (LineString,
                               LinearRing,
-                              MultiLineString,
-                              MultiPoint,
                               MultiPolygon,
                               Point,
                               Polygon,
@@ -54,6 +51,7 @@ non_segments = builds(LineString,
                       planar.contours(finite_floats,
                                       min_size=3,
                                       max_size=MAX_ITERABLES_SIZE))
+nonempty_linestrings = segments | non_segments
 
 
 def points_by_distances(line: LineString,
