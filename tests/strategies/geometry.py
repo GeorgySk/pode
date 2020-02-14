@@ -14,7 +14,8 @@ from hypothesis.strategies import (SearchStrategy,
                                    sets,
                                    tuples)
 from hypothesis_geometry import planar
-from shapely.affinity import rotate
+from shapely.affinity import (rotate,
+                              scale)
 from shapely.geometry import (LineString,
                               LinearRing,
                               MultiPolygon,
@@ -22,6 +23,7 @@ from shapely.geometry import (LineString,
                               Polygon,
                               box)
 
+from pode.geometry_utils import to_tuple
 from tests.configs import (ABS_TOL,
                            MAX_ITERABLES_SIZE)
 from tests.strategies.common import (fractions,
@@ -203,9 +205,30 @@ polygons_grids_and_dimensions = builds(
 def dont_coincide_in_centroid(polygon_and_line: Tuple[Polygon, LineString]
                               ) -> bool:
     polygon, line = polygon_and_line
-    return not line.intersects(polygon.centroid)
+    return (not line.intersects(polygon.centroid)
+            and Polygon([to_tuple(polygon.centroid), *line.coords]).area)
 
 
 polygons_and_segments = tuples(nonempty_polygons, segments)
 polygons_and_segments_not_passing_through_centroids = (
     polygons_and_segments.filter(dont_coincide_in_centroid))
+
+
+def polygon_and_segment_collinear_to_centroid(polygon: Polygon,
+                                              point: Point,
+                                              shrink_fraction: float
+                                              ) -> Tuple[Polygon, LineString]:
+    line = LineString([point, polygon.centroid])
+    line = scale(line,
+                 xfact=shrink_fraction,
+                 yfact=shrink_fraction,
+                 origin=point)
+    return polygon, line
+
+
+nonempty_points = builds(Point, planar.points(finite_floats))
+polygons_and_segments_collinear_to_centroid = builds(
+    polygon_and_segment_collinear_to_centroid,
+    nonempty_polygons,
+    nonempty_points,
+    fractions)

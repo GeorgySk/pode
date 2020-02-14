@@ -76,15 +76,19 @@ right_part.__doc__ = "Splits polygon by a line and returns the right part"
 
 
 def is_on_the_left(polygon: Polygon,
-                   line: LineString) -> bool:
+                   line: LineString,
+                   *,
+                   error: float = 1e-10) -> bool:
     """
     Determines if the polygon is on the left side of the line
     according to:
     https://stackoverflow.com/questions/50393718/determine-the-left-and-right-side-of-a-split-shapely-geometry
     Doesn't work for 3D geometries:
     https://github.com/Toblerity/Shapely/issues/709
+    The error value is necessary to check against the cases when
+    the line ray passes through the polygon's centroid.
     """
-    if any(part.is_empty for part in [polygon, line]):
+    if any(part.is_empty for part in [polygon, line]) or not line.length:
         raise ValueError(f"Result is undefined for empty geometry objects.\n"
                          f"Received polygon: {polygon.wkt}\n"
                          f"Received line: {line.wkt}")
@@ -92,9 +96,11 @@ def is_on_the_left(polygon: Polygon,
         raise ValueError("Lines consisting of more than two points can lead to"
                          "unexpected results due to the algorithm that "
                          "can construct an invalid LinearRing")
-    if line.intersects(polygon.centroid):
-        raise ValueError(f"Result is undefined when a line crosses "
-                         f"the polygon's centroid.\n"
+    if (line.intersects(polygon.centroid)
+            or Polygon([to_tuple(polygon.centroid),
+                        *line.coords]).area < error):
+        raise ValueError(f"Result is undefined when a line (or its ray) "
+                         f"crosses the polygon's centroid.\n"
                          f"Received polygon: {polygon.wkt}\n"
                          f"Received line: {line.wkt}")
     ring = LinearRing(chain(line.coords, polygon.centroid.coords))

@@ -576,7 +576,8 @@ def nonconvex_divide(polygon: Polygon,
     vertices_and_sites.append(vertices_and_sites[0])
     first_site_index = next_index(vertices_and_sites, is_site)
     first_site_point = vertices_and_sites[first_site_index]
-    endpoints = vertices_and_sites[first_site_index:-1]
+    first_endpoint_index = max(1, first_site_index)
+    endpoints = vertices_and_sites[first_endpoint_index:-1]
     first_partition, first_line = get_first_partition_for_nonconvex(
         polygon,
         start_point=vertices_and_sites[0],
@@ -607,7 +608,8 @@ def nonconvex_divide(polygon: Polygon,
                                ).boundary[0]
             t3 = line.boundary[1]
             triangle = Polygon(LineString([t1, t2, t3]))
-            if triangle.is_empty or not triangle.is_valid:
+            if (triangle.is_empty or not triangle.is_valid
+                    or triangle.area < 1e-15):
                 triangle = Polygon()
             fixed_point = line.boundary[1]
             is_head_fixed = True
@@ -668,7 +670,8 @@ def nonconvex_divide(polygon: Polygon,
                                            vertices=(t1, t2),
                                            polygon=pll_1)
             triangle = Polygon(LineString([t1, t, t3]))
-            if triangle.is_empty or not triangle.is_valid:
+            if (triangle.is_empty or not triangle.is_valid
+                    or triangle.area < 1e-15):
                 triangle = Polygon()
             if LineString([t1, t]).is_valid:
                 pred_by_line = pred_poly_by_line(LineString([t1, t]),
@@ -715,7 +718,8 @@ def nonconvex_divide(polygon: Polygon,
                                               polygon=polygon,
                                               graph=graph)
             triangle = Polygon(LineString([t1, t, t3]))
-            if triangle.is_empty or not triangle.is_valid:
+            if (triangle.is_empty or not triangle.is_valid
+                    or triangle.area < 1e-15):
                 triangle = Polygon()
             pred_by_line = pred_poly_by_line(LineString([t1, t]),
                                              polygon,
@@ -810,8 +814,17 @@ def sites_per_vertex(domain_vertices: List[Point],
     we need to get on each step a list of all previously encountered
     sites, so that later we can extract corresponding area requirement.
     """
-    yield {domain_vertices[0]: sites[domain_vertices[0]]}
-    result: SitesType = {}
+    # first site will be missing in given vertices when the first site point
+    # equals the first vertex in the polygon vertex ordering, which is done
+    # in order to prevent zero-length line-splitters
+    if domain_vertices[0] in sites:
+        yield {domain_vertices[0]: sites[domain_vertices[0]]}
+        result: SitesType = {}
+    else:
+        missing_site_point = next(site for site in sites
+                                  if site not in domain_vertices)
+        result = {missing_site_point: sites[missing_site_point]}
+        yield result
     # previous points for S1, S2, S3, ...
     for vertex in domain_vertices[:-1]:
         if vertex in sites:
@@ -1222,6 +1235,15 @@ def attach_sites(graph: nx.Graph,
     Attaches sites to the nodes of the graph
     by choosing rarest site for each node.
     """
+    points_set = set(map(Point, flatten(polygon.exterior.coords
+                                        for polygon in graph)))
+    sites_not_in_polygons = set(sites) - points_set
+    if sites_not_in_polygons:
+        raise ValueError(f"All sites should be included "
+                         f"in polygon's vertices.\n"
+                         f"Failed for sites: "
+                         f"{list(map(to_tuple, sites_not_in_polygons))}")
+
     graph = graph.copy()
 
     sites_counts = Counter()
