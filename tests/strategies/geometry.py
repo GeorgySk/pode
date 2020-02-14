@@ -53,7 +53,6 @@ non_segments = builds(LineString,
                       planar.contours(finite_floats,
                                       min_size=3,
                                       max_size=MAX_ITERABLES_SIZE))
-nonempty_linestrings = segments | non_segments
 
 
 def points_by_distances(line: LineString,
@@ -202,11 +201,16 @@ polygons_grids_and_dimensions = builds(
     angle=angles)
 
 
-def dont_coincide_in_centroid(polygon_and_line: Tuple[Polygon, LineString]
+def dont_coincide_in_centroid(polygon_and_line: Tuple[Polygon, LineString],
+                              *,
+                              error: float = 1e-10
                               ) -> bool:
     polygon, line = polygon_and_line
+    # the error corresponds to the error in is_on_the_left
+    # and probably should be taken out as a constant
     return (not line.intersects(polygon.centroid)
-            and Polygon([to_tuple(polygon.centroid), *line.coords]).area)
+            and Polygon([to_tuple(polygon.centroid),
+                         *line.coords]).area > error)
 
 
 polygons_and_segments = tuples(nonempty_polygons, segments)

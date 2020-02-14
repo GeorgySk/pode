@@ -1,4 +1,5 @@
 from math import isclose
+from typing import Tuple
 
 from hypothesis import (given,
                         note)
@@ -6,14 +7,13 @@ from shapely.geometry import (LineString,
                               Polygon)
 
 from pode.geometry_utils import right_left_parts
-from tests.strategies import (convex_polygons,
-                              segments)
+from tests.strategies import (
+    polygons_and_segments_not_passing_through_centroids)
 
 
-@given(polygon=convex_polygons,
-       segment=segments)
-def test_area(polygon: Polygon,
-              segment: LineString) -> None:
+@given(polygons_and_segments_not_passing_through_centroids)
+def test_area(polygon_and_segment: Tuple[Polygon, LineString]) -> None:
+    polygon, segment = polygon_and_segment
     note(f"Polygon: {polygon.wkt}\n"
          f"LineString: {segment.wkt}")
     part, other_part = right_left_parts(polygon, segment)

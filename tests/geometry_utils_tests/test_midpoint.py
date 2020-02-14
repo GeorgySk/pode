@@ -8,12 +8,11 @@ from shapely.geometry import (LineString,
 
 from pode.geometry_utils import midpoint
 from tests.strategies import (empty_linestrings,
-                              nonempty_linestrings,
                               segments)
 from tests.utils import no_trim_wkt
 
 
-@given(nonempty_linestrings)
+@given(segments)
 def test_distance(line: LineString) -> None:
     note(f'Line: {no_trim_wkt(line)}')
     point = Point(midpoint(line))
