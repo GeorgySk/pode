@@ -49,12 +49,14 @@ def right_left_parts(polygon: Polygon,
                      *,
                      error: float = 1e-16) -> Tuple[Polygon, Polygon]:
     """
-    Splits polygon by a line and returns two parts: right and left.
+    Splits convex polygon by a line and returns right and left parts.
     Important notes:
     1) The parts will not necessarily lie completely inside the parent
     polygon due to precision errors.
     2) Input polygon can contain three or more collinear points
-    on one segment
+    on one segment which can make it nonconvex. Currently, there is no
+    restriction on the input polygon to be convex, but some input
+    parameters can result in errors.
     3) Line ends lie not necessarily on the boundary of the polygon
     """
     if polygon.is_empty:
@@ -62,6 +64,11 @@ def right_left_parts(polygon: Polygon,
     if len(line.coords) != 2:
         raise ValueError("Only lines consisting of 2 points are supported")
     part, *other_parts = split(polygon, line)
+    if len(other_parts) > 1:
+        raise ValueError("Splitting the polygon resulted in more than "
+                         "2 parts. This could be due to precision errors "
+                         "when the splitter coincides with one of polygon's "
+                         "edges.")
     other_part = other_parts[0] if other_parts else Polygon()
     small_part, big_part = sorted((part, other_part), key=Polygon.area.fget)
     if small_part.area < error:
@@ -78,7 +85,7 @@ right_part.__doc__ = "Splits polygon by a line and returns the right part"
 def is_on_the_left(polygon: Polygon,
                    line: LineString,
                    *,
-                   error: float = 1e-10) -> bool:
+                   error: float = 1e-9) -> bool:
     """
     Determines if the polygon is on the left side of the line
     according to:

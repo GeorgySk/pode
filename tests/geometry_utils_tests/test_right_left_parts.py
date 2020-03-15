@@ -8,10 +8,10 @@ from shapely.geometry import (LineString,
 
 from pode.geometry_utils import right_left_parts
 from tests.strategies import (
-    polygons_and_segments_not_passing_through_centroids)
+    convex_polygons_and_segments_not_passing_through_centroids)
 
 
-@given(polygons_and_segments_not_passing_through_centroids)
+@given(convex_polygons_and_segments_not_passing_through_centroids)
 def test_area(polygon_and_segment: Tuple[Polygon, LineString]) -> None:
     polygon, segment = polygon_and_segment
     note(f"Polygon: {polygon.wkt}\n"

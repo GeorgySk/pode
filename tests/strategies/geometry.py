@@ -141,9 +141,30 @@ nonconvex_polygons = builds(
 nonconvex_polygons |= window_polygons
 nonconvex_polygons = nonconvex_polygons.filter(has_no_close_points)
 
+
+def polygon_with_redundant_points(polygon: Polygon,
+                                  normalized_distances: List[float]
+                                  ) -> Polygon:
+    """
+    Adds new points on polygon edges.
+    Could be extended to add points to holes as well.
+    """
+    new_points = (polygon.exterior.interpolate(distance, normalized=True)
+                  for distance in normalized_distances)
+    sorted_points = sorted({*new_points, *map(Point, polygon.exterior.coords)},
+                           key=polygon.exterior.project)
+    return Polygon(map(to_tuple, sorted_points),
+                   holes=polygon.interiors)
+
+
 empty_polygons = builds(Polygon)
 nonempty_polygons = convex_polygons | nonconvex_polygons
+nonempty_polygons = builds(
+    polygon_with_redundant_points,
+    polygon=nonempty_polygons,
+    normalized_distances=lists(fractions, max_size=MAX_ITERABLES_SIZE))
 polygons = empty_polygons | nonempty_polygons
+
 
 polygons_lists = lists(polygons, max_size=MAX_ITERABLES_SIZE)
 nonempty_polygons_lists = lists(polygons,
@@ -216,6 +237,9 @@ def dont_coincide_in_centroid(polygon_and_line: Tuple[Polygon, LineString],
 polygons_and_segments = tuples(nonempty_polygons, segments)
 polygons_and_segments_not_passing_through_centroids = (
     polygons_and_segments.filter(dont_coincide_in_centroid))
+convex_polygons_and_segments = tuples(convex_polygons, segments)
+convex_polygons_and_segments_not_passing_through_centroids = (
+    convex_polygons_and_segments.filter(dont_coincide_in_centroid))
 
 
 def polygon_and_segment_collinear_to_centroid(polygon: Polygon,

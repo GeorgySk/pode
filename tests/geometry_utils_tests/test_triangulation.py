@@ -11,6 +11,7 @@ from tests.utils import (is_close,
 
 @given(nonempty_polygons)
 def test_area(polygon: Polygon) -> None:
-    note(f'Polygon: {no_trim_wkt(polygon)}')
+    note(f"Polygon: {no_trim_wkt(polygon)}")
+    note(f"Polygon's convex hull: {no_trim_wkt(polygon.convex_hull)}")
     parts = triangulation(polygon)
     assert is_close(polygon.convex_hull.area, unary_union(parts).area)
