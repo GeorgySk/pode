@@ -1,4 +1,5 @@
 from .geometry import (
+    area_greater_than_tolerance_polygons,
     convex_polygons,
     convex_polygons_and_segments_not_passing_through_centroids,
     disjoint_lines,

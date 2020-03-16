@@ -7,6 +7,7 @@ from shapely.geometry import (LineString,
                               Polygon)
 
 from pode.geometry_utils import right_part
+from tests.configs import ABS_TOL
 from tests.strategies import (
     convex_polygons_and_segments_not_passing_through_centroids,
     empty_polygons,
@@ -21,7 +22,7 @@ def test_area(polygon_and_segment: Tuple[Polygon, LineString]) -> None:
     note(f"Polygon: {polygon.wkt}\n"
          f"LineString: {segment.wkt}")
     part = right_part(polygon, segment)
-    assert part.area <= polygon.area
+    assert part.area <= polygon.area + ABS_TOL
 
 
 @given(polygon=empty_polygons,

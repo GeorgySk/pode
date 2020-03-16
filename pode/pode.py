@@ -53,7 +53,6 @@ from shapely.ops import unary_union
 from .geometry_utils import (are_touching,
                              insert_between,
                              join_to_convex,
-                             midpoint,
                              right_left_parts,
                              right_part,
                              rotating_splitter,
@@ -313,7 +312,7 @@ def bisection_search(*,
     start_search_index, search_line = next_enumerate(polygon_sides,
                                                      search_line.equals)
     for _ in range(max_iterations_count):
-        endpoint = midpoint(search_line)
+        endpoint = search_line.centroid
         division_line = (LineString([endpoint, fixed_point]) if is_head_fixed
                          else LineString([fixed_point, endpoint]))
         # adding a "snap"-point on the search line - prevents precision errors
@@ -378,7 +377,7 @@ def detach_and_assign(graph: nx.Graph
                 site_point, initial_requirement = first(
                     pseudo_sites_relations.get(site_point, sites).items())
                 pseudo_requirement = requirement - pred_polygon.area
-                pseudo_site_point = Point(midpoint(edge))
+                pseudo_site_point = edge.centroid
                 pred_polygon = insert_between(point=pseudo_site_point,
                                               vertices=edge.boundary,
                                               polygon=pred_polygon)
@@ -739,7 +738,7 @@ def nonconvex_divide(polygon: Polygon,
                               sites=sites)
             return [a, b], graph, next_neighbor(polygon, graph)
         else:
-            ps = midpoint(LineString([t1, t2]))
+            ps = LineString([t1, t2]).centroid
             triangle = Polygon(LineString([t1, ps, t3]))
             a = pred_poly_by_line(LineString([t1, t2]), polygon, graph)
             a = insert_between(Point(ps), (t1, t2), a)
@@ -761,8 +760,8 @@ def nonconvex_divide(polygon: Polygon,
                                           graph=graph)
             return [b, a, c], graph, next_neighbor(polygon, graph)
     else:
-        t = midpoint(LineString([vertices_and_sites[-2],
-                                 vertices_and_sites[0]]))
+        t = LineString([vertices_and_sites[-2],
+                        vertices_and_sites[0]]).centroid
         line = LineString([t, first_site_point])
         original_polygon = polygon
         polygon = Polygon([*polygon.exterior.coords[:-1], t])
@@ -918,7 +917,7 @@ def bisection_search_w_point(*,
 
     # standard bisection search
     for _ in range(max_iterations_count):
-        endpoint = midpoint(search_line)
+        endpoint = search_line.centroid
         division_line = (LineString([endpoint, fixed_point]) if is_head_fixed
                          else LineString([fixed_point, endpoint]))
         # adding a "snap"-point on the search line - prevents precision errors
@@ -1321,7 +1320,7 @@ def divide_on_the_go(graph: nx.Graph,
                 edge = graph[polygon][neighbor]['side']
                 furthest_segment = max(segments(polygon.exterior),
                                        key=edge.distance)
-                site_point = Point(midpoint(furthest_segment))
+                site_point = furthest_segment.centroid
             try:
                 sites = {site_point: next(requirements)}
                 assigned_sites_locations.add(site_point)
@@ -1360,7 +1359,7 @@ def divide_on_the_go(graph: nx.Graph,
                 area_incomplete_polygons[site_point].append(pred_polygon)
                 graph.remove_nodes_from(pred_polygons)
                 pseudo_requirement = requirement - pred_polygon.area
-                pseudo_site_point = Point(midpoint(edge))
+                pseudo_site_point = edge.centroid
                 pseudo_sites_relations[pseudo_site_point] = (
                     {site_point: initial_requirement})
                 graph.nodes[neighbor].update(

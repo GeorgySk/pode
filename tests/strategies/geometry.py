@@ -157,12 +157,18 @@ def polygon_with_redundant_points(polygon: Polygon,
                    holes=polygon.interiors)
 
 
+def has_area_greater_than_tolerance(polygon: Polygon) -> bool:
+    return polygon.area > ABS_TOL
+
+
 empty_polygons = builds(Polygon)
 nonempty_polygons = convex_polygons | nonconvex_polygons
 nonempty_polygons = builds(
     polygon_with_redundant_points,
     polygon=nonempty_polygons,
     normalized_distances=lists(fractions, max_size=MAX_ITERABLES_SIZE))
+area_greater_than_tolerance_polygons = nonempty_polygons.filter(
+    has_area_greater_than_tolerance)
 polygons = empty_polygons | nonempty_polygons
 
 
@@ -224,7 +230,7 @@ polygons_grids_and_dimensions = builds(
 
 def dont_coincide_in_centroid(polygon_and_line: Tuple[Polygon, LineString],
                               *,
-                              error: float = 1e-10
+                              error: float = 1e-9
                               ) -> bool:
     polygon, line = polygon_and_line
     # the error corresponds to the error in is_on_the_left

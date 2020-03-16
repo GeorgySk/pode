@@ -32,6 +32,8 @@ from shapely.ops import split
 from pode.utils import (next_index,
                         starfilter)
 
+MIN_VALID_AREA = 2. ** -23
+
 
 def segments(ring: LinearRing) -> Iterator[LineString]:
     """
@@ -114,13 +116,6 @@ def is_on_the_left(polygon: Polygon,
     return ring.is_ccw
 
 
-def midpoint(line: LineString) -> Tuple[float, float]:
-    """Returns coordinates of the middle of the input line"""
-    if line.is_empty:
-        raise ValueError("Can't determine a midpoint of an empty line.")
-    return line.interpolate(0.5, normalized=True).coords[0]
-
-
 def to_graph(polygons: Sequence[Polygon]) -> nx.Graph:
     """
     Returns graph representation of input polygons.
@@ -186,11 +181,17 @@ def are_touching(segment: LineString,
         return close_points_count >= 2
 
 
-def to_convex_parts(polygon: Polygon) -> Iterator[Polygon]:
+def to_convex_parts(polygon: Polygon,
+                    *,
+                    min_valid_area: float = MIN_VALID_AREA
+                    ) -> Iterator[Polygon]:
     """
     Splits a polygon to convex parts.
     Implemented by simple Delaunay triangulation.
     """
+    if polygon.area < min_valid_area:
+        raise ValueError(f"Polygons with too small area can result in "
+                         f"errors. Got: {polygon.wkt}")
     parts = triangulation(polygon)
     for intersection in map(polygon.intersection, parts):
         if isinstance(intersection, Polygon):
@@ -201,7 +202,9 @@ def to_convex_parts(polygon: Polygon) -> Iterator[Polygon]:
                     yield part
 
 
-def triangulation(polygon: Polygon) -> List[Polygon]:
+def triangulation(polygon: Polygon,
+                  *,
+                  min_valid_area: float = MIN_VALID_AREA) -> List[Polygon]:
     """
     This is an alternative to Shapely's ops.triangulate function.
     As due to some bugs it can return wrong results sometimes,
@@ -213,6 +216,9 @@ def triangulation(polygon: Polygon) -> List[Polygon]:
             Polygon([(0, 0), (0, 486), (1, 486), (1, 22), (2, 22), (2, 0)])
     Bug is submitted to GitHub.
     """
+    if polygon.area < min_valid_area:
+        raise ValueError(f"Polygons with too small area can result in "
+                         f"errors. Got: {polygon.wkt}")
     exterior_coords_set = set(polygon.exterior.coords)
     interiors_coords_sequences = map(LinearRing.coords.fget, polygon.interiors)
     interiors_coords_set = set(flatten(interiors_coords_sequences))

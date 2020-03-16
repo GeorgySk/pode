@@ -4,12 +4,12 @@ from shapely.geometry import Polygon
 from shapely.ops import unary_union
 
 from pode.geometry_utils import triangulation
-from tests.strategies import nonempty_polygons
+from tests.strategies import area_greater_than_tolerance_polygons
 from tests.utils import (is_close,
                          no_trim_wkt)
 
 
-@given(nonempty_polygons)
+@given(area_greater_than_tolerance_polygons)
 def test_area(polygon: Polygon) -> None:
     note(f"Polygon: {no_trim_wkt(polygon)}")
     note(f"Polygon's convex hull: {no_trim_wkt(polygon.convex_hull)}")
