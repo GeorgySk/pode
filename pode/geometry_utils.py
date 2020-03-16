@@ -172,7 +172,8 @@ def are_touching(segment: LineString,
     and touch in more than one point.
     Buffer values less than 1e-8 can lead to errors
     """
-    if isinstance(segment.intersection(other), LineString):
+    intersection = segment.intersection(other)
+    if isinstance(intersection, LineString) and not intersection.is_empty:
         return True
     a, b = segment.boundary
     c, d = other.boundary
