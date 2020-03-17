@@ -2,6 +2,7 @@ from itertools import (chain,
                        combinations,
                        product)
 from math import (atan2,
+                  isclose,
                   tan)
 from operator import itemgetter
 from typing import (Callable,
@@ -270,14 +271,18 @@ def slope_angle(line: LineString) -> float:
 def rotating_splitter(fraction: float,
                       source_line: LineString,
                       target_line: LineString,
-                      length: float) -> LineString:
+                      length: float,
+                      *,
+                      angle_tolerance: float = 1e-14) -> LineString:
     scale_factor_by_axis = length / source_line.length
     source_line_slope, source_line_intercept = slope_intercept(source_line)
     target_line_slope, target_line_intercept = slope_intercept(target_line)
     line = scale(source_line,
                  xfact=scale_factor_by_axis,
                  yfact=scale_factor_by_axis)
-    if source_line_slope == target_line_slope:
+    if isclose(source_line_slope,
+               target_line_slope,
+               abs_tol=angle_tolerance):
         source_line_center = source_line.centroid
         target_line_center = target_line.centroid
         dx = (target_line_center.x - source_line_center.x) * fraction
