@@ -5,14 +5,15 @@ services:
     build:
       context: .
       args:
-      - PYTHON_IMAGE=${CPYTHON_IMAGE_NAME}
-      - PYTHON_IMAGE_VERSION=${CPYTHON_IMAGE_VERSION}
+        - PYTHON_IMAGE=${CPYTHON_IMAGE_NAME}
+        - PYTHON_IMAGE_VERSION=${CPYTHON_IMAGE_VERSION}
     image: lostfan123/pode-cpython:0.0.0
     volumes:
       - ./pode/:/opt/pode/pode/
       - ./tests/:/opt/pode/tests/
       - ./README.md:/opt/pode/README.md
+      - ./requirements.txt:/opt/pode/requirements.txt
+      - ./requirements-tests.txt:/opt/pode/requirements-tests.txt
       - ./setup.py:/opt/pode/setup.py
-      - ./setup.cfg:/opt/pode/setup.cfg
-    entrypoint: python3
-    command: setup.py test
+      - ./pytest.ini:/opt/pode/pytest.ini
+    entrypoint: pytest

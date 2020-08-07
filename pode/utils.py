@@ -1,100 +1,185 @@
-from functools import lru_cache
-from itertools import repeat
-from operator import (itemgetter,
-                      mul)
-from typing import (Callable,
-                    Dict,
-                    Iterable,
-                    Iterator,
-                    Optional,
-                    Sequence,
-                    Tuple,
-                    TypeVar)
+import operator
+from fractions import Fraction
+from functools import (reduce,
+                       singledispatch)
+from statistics import mean
+from typing import (Iterator,
+                    List,
+                    TypeVar,
+                    Union)
 
-from lz.functional import (compose,
-                           pack)
+from gon.angular import Orientation
+from gon.compound import Shaped
+from gon.degenerate import (EMPTY,
+                            Empty)
+from gon.discrete import Multipoint
+from gon.geometry import Geometry
+from gon.linear import (Contour,
+                        Segment)
+from gon.primitive import Point
+from gon.shaped import Polygon
 
-T = TypeVar('T')
-Predicate = Callable[[T], bool]
+GeometryType = TypeVar('GeometryType', bound=Geometry)
 
 
-def next_enumerate(iterable: Iterable[T],
-                   predicate: Predicate) -> Tuple[int, T]:
+def cut(contour: Contour,
+        start: Point,
+        end: Point) -> List[Point]:
     """
-    Returns index and value of the first element
-    satisfying a predicate
+    Returns all points between the start point and the end point lying
+    on the counter including the endpoints themselves.
+    The points do not necessarily match with contour vertices.
     """
-    apply_on_value = compose(predicate, itemgetter(1))
-    return next(filter(apply_on_value, enumerate(iterable)))
-
-
-def next_index(iterable: Iterable[T],
-               predicate: Predicate) -> int:
-    """Returns index of the first element satisfying a predicate"""
-    return next(index for index, value in enumerate(iterable)
-                if predicate(value))
-
-
-def last_index(iterable: Sequence[T],
-               predicate: Predicate) -> int:
-    """Returns index of a last element satisfying a predicate"""
-    return len(iterable) - next_index(reversed(iterable), predicate) - 1
-
-
-def find_if_or_last(predicate: Predicate,
-                    iterable: Iterable[T]) -> Optional[T]:
-    """
-    Returns the first element of `iterable`
-    satisfying a condition defined by `predicate`.
-    If no such an element was found, the last element is returned.
-    If the `iterable` was empty, `None` is returned.
-    """
-    element = None
-    for element in iterable:
-        if predicate(element):
-            return element
+    if any(point not in contour for point in (start, end)):
+        raise ValueError(f"Both start point and end point should lie on "
+                         f"the contour")
+    vertices = [*contour.vertices, contour.vertices[0]]
+    start_index = (vertices.index(start) if start in vertices
+                   else next((index
+                              for index, edge in enumerate(edges(contour))
+                              if start in edge)))
+    end_index = (vertices[1:].index(end) + 1 if end in vertices
+                 else next((index for index, edge in enumerate(edges(contour))
+                           if end in edge)))
+    if start_index < end_index:
+        result = vertices[start_index + 1:end_index + 1]
+    elif start_index > end_index:
+        result = vertices[start_index + 1:-1] + vertices[:end_index + 1]
     else:
-        return element
+        segment_to_start = Segment(vertices[start_index], start)
+        segment_to_end = Segment(vertices[start_index], end)
+        if segment_to_start.length < segment_to_end.length:
+            return [start, end]
+        else:
+            result = vertices[start_index + 1:-1] + vertices[:end_index + 1]
+    head = [vertices[start_index]] if start in vertices else [start]
+    tail = [] if end in vertices else [end]
+    return head + result + tail
 
 
-def difference_by_key(mapping: Dict, other_mapping: Dict) -> Dict:
-    """
-    Returns dict of key-value pairs from mapping
-    which keys are not encountered in other_mapping
-    """
-    keys_difference = set(mapping) - set(other_mapping)
-    return dict(zip(keys_difference, map(mapping.get, keys_difference)))
+def edges(contour: Contour) -> Iterator[Segment]:
+    vertices = [*contour.vertices, contour.vertices[0]]
+    yield from (Segment(vertices[index], vertices[index + 1])
+                for index in range(len(vertices) - 1))
 
 
-def scalar_multiplication(vector: Iterable[float],
-                          scalar: float) -> Iterator[float]:
-    """scalar_multiplication([1 2 3], 2) -> [2 4 6]"""
-    yield from map(mul, vector, repeat(scalar))
+def shrink_collinear_vertices(contour: Contour) -> List[Point]:
+    vertices = list(contour.vertices)
+    index = -len(vertices) + 1
+    while index < 0:
+        while (max(2, -index) < len(vertices)
+               and (Contour([vertices[index + 2],
+                             vertices[index + 1],
+                             vertices[index]]).orientation
+                    is Orientation.COLLINEAR)):
+            del vertices[index + 1]
+        index += 1
+    while index < len(vertices):
+        while (max(2, index) < len(vertices)
+               and (Contour([vertices[index - 2],
+                             vertices[index - 1],
+                             vertices[index]]).orientation
+                    is Orientation.COLLINEAR)):
+            del vertices[index - 1]
+        index += 1
+    return vertices
 
 
-def iff(statement: bool,
-        other_statement: bool) -> bool:
-    """
-    'If and only if' - biconditional logical connective.
-    Returns `True` if both statements are `True` or `False`.
-    """
-    return not (statement ^ other_statement)
+@singledispatch
+def to_fractions(geometry: GeometryType) -> GeometryType:
+    raise TypeError(f"Unsupported type: {type(geometry)}")
 
 
-@lru_cache(maxsize=None)
-def cached_sum(*values: Tuple[float]) -> float:
-    """
-    Calculates sum of input arguments
-    and remembers results for the same input
-    """
-    return sum(values)
+@to_fractions.register
+def _(geometry: Point) -> Point:
+    return Point(Fraction(geometry.x), Fraction(geometry.y))
 
 
-def starfilter(predicate: Predicate,
-               iterable: Iterable[T]) -> Iterator[T]:
-    """
-    Can be used when elements of an iterable are packed in tuples
-    but the predicate function expects separate arguments.
-    Similar to `itertools.starmap`.
-    """
-    return filter(pack(predicate), iterable)
+@to_fractions.register
+def _(geometry: Contour) -> Contour:
+    return Contour(list(map(to_fractions, geometry.vertices)))
+
+
+@to_fractions.register
+def _(geometry: Polygon) -> Polygon:
+    return Polygon(to_fractions(geometry.border),
+                   list(map(to_fractions, geometry.holes)))
+
+
+def union(*geometries: Shaped) -> Union[Shaped, Empty]:
+    if not geometries:
+        return EMPTY
+    return reduce(operator.or_, geometries)
+
+
+def midpoint(start: Point,
+             end: Point) -> Point:
+    """Returns coordinates of the middle of the input line"""
+    return Point((start.x + end.x) / 2, (start.y + end.y) / 2)
+
+
+def splitter_point(requirement: float,
+                   pivot: Point,
+                   low_area_point: Point,
+                   high_area_point: Point) -> Point:
+    """Alternative to bisection search since we always have triangles"""
+    if requirement <= 0:
+        raise ValueError("Can't have a zero or negative requirement")
+    p = pivot
+    l = low_area_point
+    h = high_area_point
+    contour = Contour([p, l, h])
+    triangle = Polygon(contour)
+    if triangle.area < requirement:
+        raise ValueError("Can't have a requirement greater than the area of "
+                         "the triangle")
+    r = requirement
+    dx = h.x - l.x
+    if dx == 0:
+        if contour.orientation is Orientation.COUNTERCLOCKWISE:
+            a = (p.y - l.y) / (p.x - l.x)
+            b = (p.x * l.y - l.x * p.y - 2 * r) / (p.x - l.x)
+            x = l.x
+            y = a * l.x + b
+            return Point(x, y)
+        else:
+            t = triangle.area - r
+            a = (p.y - h.y) / (p.x - h.x)
+            b = (p.x * h.y - h.x * p.y - 2 * t) / (p.x - h.x)
+            x = h.x
+            y = a * h.x + b
+            return Point(x, y)
+    k = (h.y - l.y) / dx
+    m = h.y - k * h.x
+    if contour.orientation is Orientation.COUNTERCLOCKWISE:
+        dx = p.x - l.x
+        if dx == 0:
+            x = (2 * r + l.x * p.y - p.x * l.y) / (p.y - l.y)
+            y = k * x + m
+            return Point(x, y)
+        a = (p.y - l.y) / dx
+        b = (p.x * l.y - l.x * p.y - 2 * r) / dx
+    else:
+        t = triangle.area - r
+        dx = p.x - h.x
+        if dx == 0:
+            x = (2 * t + h.x * p.y - p.x * h.y) / (p.y - h.y)
+            y = k * x + m
+            return Point(x, y)
+        a = (p.y - h.y) / dx
+        b = (p.x * h.y - h.x * p.y - 2 * t) / dx
+    x = (m - b) / (a - k)
+    y = a * x + b
+    return Point(x, y)
+
+
+def orient(polygon: Polygon) -> Polygon:
+    """To counterclockwise. No holes"""
+    return Polygon(polygon.border.to_counterclockwise())
+
+
+def centroid(points: Multipoint) -> Point:
+    """Arithmetic mean position of the given points"""
+    mean_x = mean(point.x for point in points.points)
+    mean_y = mean(point.y for point in points.points)
+    return Point(mean_x, mean_y)
