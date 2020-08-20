@@ -296,20 +296,32 @@ def divide(polygon: Polygon,
         if not current_sites:
             continue
         requirement = sum(site.requirement for site in current_sites)
-        if pred_polys.area == requirement:
+        if len(current_sites) == 1 and pred_polys.area < requirement:
+            neighbor = graph.next_neighbor(current_polygon)
+            edge = graph[current_polygon][neighbor]['side']
+            site = current_sites.pop()
+            sites.remove(site)
+            site = pseudosites_to_sites.get(site, site)
+            pseudosite = Site(location=midpoint(edge.start, edge.end),
+                              requirement=requirement - pred_polys.area)
             pred_poly = union(*pred_polys)
-            if len(current_sites) == 1:
-                site = current_sites.pop()
-                graph.remove_nodes_from(pred_polys)
-                sites.remove(site)
-                if site not in pseudosites_to_sites:
-                    division[site] = pred_poly
-                else:
-                    original_site = pseudosites_to_sites[site]
-                    division[original_site] = union(
-                        pred_poly, *area_incomplete_polygons[original_site])
+            area_incomplete_polygons[site].append(pred_poly)
+            graph.remove_nodes_from(pred_polys)
+            pseudosites_to_sites[pseudosite] = site
+            sites.append(pseudosite)
+        elif len(current_sites) == 1 and pred_polys.area == requirement:
+            site = current_sites.pop()
+            graph.remove_nodes_from(pred_polys)
+            sites.remove(site)
+            if site not in pseudosites_to_sites:
+                division[site] = union(*pred_polys)
             else:
-                neighbor = graph.next_neighbor(current_polygon)
+                original_site = pseudosites_to_sites[site]
+                division[original_site] = union(
+                    *pred_polys, *area_incomplete_polygons[original_site])
+        else:
+            neighbor = graph.next_neighbor(current_polygon)
+            if pred_polys.area == requirement:
                 sites_locations = [site.location for site in current_sites]
                 extra_points = (graph.neighbor_edges_vertices(current_polygon)
                                 if neighbor is not None else [])
@@ -317,51 +329,17 @@ def divide(polygon: Polygon,
                                         *sites_locations,
                                         *extra_points})
                 vertices = order_by_sites(vertices, sites_locations[0])
-                parts = nonconvex_divide(polygon=current_polygon,
-                                         vertices=vertices,
-                                         sites=current_sites,
-                                         graph=graph)
-                graph.remove_nodes_from(pred_polys)
-                graph = (graph.prepend_two(parts, neighbor) if len(parts) == 2
-                         else graph.prepend_three(parts, neighbor))
-        elif pred_polys.area < requirement:
-            neighbor = graph.next_neighbor(current_polygon)
-            edge = graph[current_polygon][neighbor]['side']
-            if len(current_sites) == 1:
-                site = current_sites.pop()
-                sites.remove(site)
-                site = pseudosites_to_sites.get(site, site)
-                pseudosite = Site(location=midpoint(edge.start, edge.end),
-                                  requirement=requirement - pred_polys.area)
-                pred_poly = union(*pred_polys)
-                area_incomplete_polygons[site].append(pred_poly)
-                graph.remove_nodes_from(pred_polys)
-                pseudosites_to_sites[pseudosite] = site
-                sites.append(pseudosite)
             else:
+                edge = graph[current_polygon][neighbor]['side']
                 extra_points = graph.neighbor_edges_vertices(current_polygon)
                 vertices = Multipoint(*{*current_polygon.border.vertices,
                                         *extra_points,
                                         *(site.location
                                           for site in current_sites)})
                 vertices = order_by_edge(vertices, edge)
-                parts = nonconvex_divide(polygon=current_polygon,
-                                         vertices=vertices,
-                                         sites=current_sites, graph=graph)
-                graph.remove_nodes_from(pred_polys)
-                graph = (graph.prepend_two(parts, neighbor) if len(parts) == 2
-                         else graph.prepend_three(parts, neighbor))
-        else:
-            neighbor = graph.next_neighbor(current_polygon)
-            edge = graph[current_polygon][neighbor]['side']
-            extra_points = graph.neighbor_edges_vertices(current_polygon)
-            vertices = Multipoint(*{*current_polygon.border.vertices,
-                                    *extra_points,
-                                    *(site.location
-                                      for site in current_sites)})
-            vertices = order_by_edge(vertices, edge)
             parts = nonconvex_divide(polygon=current_polygon,
-                                     vertices=vertices, sites=current_sites,
+                                     vertices=vertices,
+                                     sites=current_sites,
                                      graph=graph)
             graph.remove_nodes_from(pred_polys)
             graph = (graph.prepend_two(parts, neighbor) if len(parts) == 2
