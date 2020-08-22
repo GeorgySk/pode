@@ -13,7 +13,6 @@ from typing import (DefaultDict,
                     Iterator,
                     List,
                     Optional,
-                    Set,
                     Tuple,
                     Union,
                     cast)
@@ -87,6 +86,8 @@ class Graph(nx.DiGraph):
                 ordered_graph.edges[edge]['side'] = side
             else:
                 ordered_graph.edges[edge[::-1]]['side'] = side
+        for node in ordered_graph:
+            ordered_graph.nodes[node].update({'sites': frozenset()})
         return ordered_graph
 
     def next_neighbor(self, polygon: Polygon) -> Optional[Polygon]:
@@ -202,6 +203,10 @@ class Graph(nx.DiGraph):
                 intersection = node & target
                 if isinstance(intersection, Segment):
                     new_graph.add_edge(node, target, side=intersection)
+        # Copying attributes containing sites per node
+        for graph in (*parts, self):
+            for node in graph:
+                new_graph.nodes[node].update(graph.nodes[node])
         return new_graph
 
     def prepend_three(self,
@@ -236,6 +241,10 @@ class Graph(nx.DiGraph):
                 new_graph.add_edge(second_connector_node,
                                    target,
                                    side=intersection)
+        # Copying attributes containing sites per node
+        for graph in (*parts, self):
+            for node in graph:
+                new_graph.nodes[node].update(graph.nodes[node])
         return new_graph
 
     def subgraph(self, polygons: Iterable[Polygon]) -> 'Graph':
@@ -250,14 +259,18 @@ class Graph(nx.DiGraph):
         for *edge, side in self.edges.data('side'):
             if all(polygon in polygons for polygon in edge):
                 new_graph.add_edge(*edge, side=side)
+        # Copying attributes containing sites per node
+        for node in new_graph:
+            new_graph.nodes[node].update(self.nodes[node])
         return new_graph
 
 
-def divide(polygon: Polygon,
-           sites: List[Site],
-           *,
-           convex_divisor: ConvexDivisor = constrained_delaunay_triangles
-           ) -> Dict[Site, Shaped]:
+def divide_by_sites(
+        polygon: Polygon,
+        sites: List[Site],
+        *,
+        convex_divisor: ConvexDivisor = constrained_delaunay_triangles
+        ) -> List[Tuple[Site, Shaped]]:
     """
     Divides given polygon for the given sites
     :param polygon: input polygon
@@ -271,13 +284,13 @@ def divide(polygon: Polygon,
     if sum(site.requirement for site in sites) != 1:
         raise ValueError("Area requirements should sum up to 1.")
     if len(sites) == 1:
-        return {sites[0]: polygon}
+        return [(sites[0], polygon)]
     if any(site.requirement < 0.01 for site in sites):
         raise ValueError("Sites' requirements are currently limited to be "
                          "greater than 0.01")
     polygon = to_fractions(polygon)
-    sites = normalize(sites, polygon_area=polygon.area)
-    division: Dict[Site, Shaped] = {}
+    sites = frozenset(normalize_sites(sites, polygon_area=polygon.area))
+    division = []
     pseudosites_to_sites: Dict[Site, Site] = {}
     area_incomplete_polygons: DefaultDict[Site,
                                           List[Polygon]] = defaultdict(list)
@@ -295,12 +308,12 @@ def divide(polygon: Polygon,
                                           graph=graph)
         if not current_sites:
             continue
+        sites -= current_sites
         requirement = sum(site.requirement for site in current_sites)
         if len(current_sites) == 1 and pred_polys.area < requirement:
             neighbor = graph.next_neighbor(current_polygon)
             edge = graph[current_polygon][neighbor]['side']
-            site = current_sites.pop()
-            sites.remove(site)
+            site = list(current_sites)[0]
             site = pseudosites_to_sites.get(site, site)
             pseudosite = Site(location=midpoint(edge.start, edge.end),
                               requirement=requirement - pred_polys.area)
@@ -308,20 +321,20 @@ def divide(polygon: Polygon,
             area_incomplete_polygons[site].append(pred_poly)
             graph.remove_nodes_from(pred_polys)
             pseudosites_to_sites[pseudosite] = site
-            sites.append(pseudosite)
+            graph.nodes[neighbor]['sites'] |= {pseudosite}
         elif len(current_sites) == 1 and pred_polys.area == requirement:
-            site = current_sites.pop()
+            site = list(current_sites)[0]
             graph.remove_nodes_from(pred_polys)
-            sites.remove(site)
             if site not in pseudosites_to_sites:
-                division[site] = union(*pred_polys)
+                division.append((site, union(*pred_polys)))
             else:
                 original_site = pseudosites_to_sites[site]
-                division[original_site] = union(
-                    *pred_polys, *area_incomplete_polygons[original_site])
+                area = union(*pred_polys,
+                             *area_incomplete_polygons[original_site])
+                division.append((original_site, area))
         else:
             neighbor = graph.next_neighbor(current_polygon)
-            if pred_polys.area == requirement:
+            if neighbor is None:
                 sites_locations = [site.location for site in current_sites]
                 extra_points = (graph.neighbor_edges_vertices(current_polygon)
                                 if neighbor is not None else [])
@@ -345,31 +358,130 @@ def divide(polygon: Polygon,
             graph = (graph.prepend_two(parts, neighbor) if len(parts) == 2
                      else graph.prepend_three(parts, neighbor))
         remaining_nodes = iter(graph.nodes)
-        if len(sites) == 1:
-            site = sites[0]
-            if site not in pseudosites_to_sites:
-                division[site] = union(*remaining_nodes)
-            else:
-                original_site = pseudosites_to_sites[site]
-                division[original_site] = union(
-                    *area_incomplete_polygons[original_site],
-                    *remaining_nodes)
-            break
     return division
 
 
-def normalize(sites: List[Site],
-              *,
-              polygon_area: Fraction) -> List[Site]:
+def divide_by_requirements(
+        polygon: Polygon,
+        requirements: List[Real],
+        *,
+        convex_divisor: ConvexDivisor = constrained_delaunay_triangles
+        ) -> List[Tuple[Site, Shaped]]:
+    """
+    Divides given polygon for the given requirements
+    :param polygon: input polygon
+    :param requirements: input requirements
+    :param convex_divisor: function to split input polygon to convex
+    parts
+    :return: mapping of sites to resulting parts of input polygon
+    """
+    if sum(requirement for requirement in requirements) != 1:
+        raise ValueError("Area requirements should sum up to 1.")
+    if len(requirements) == 1:
+        site = Site(location=polygon.border.vertices[0],
+                    requirement=requirements[0])
+        return [(site, polygon)]
+    if any(requirement < 0.01 for requirement in requirements):
+        raise ValueError("Requirements are currently limited to be "
+                         "greater than 0.01")
+    polygon = to_fractions(polygon)
+    requirements = normalize_requirements(requirements,
+                                          polygon_area=polygon.area)
+    division = []
+    pseudosites_to_sites: Dict[Site, Site] = {}
+    area_incomplete_polygons: DefaultDict[Site,
+                                          List[Polygon]] = defaultdict(list)
+    graph = to_graph(polygon,
+                     sites_locations=[],
+                     convex_divisor=convex_divisor)
+    graph = Graph.from_undirected(graph)
+    remaining_nodes = iter(graph.nodes)
+    while graph:
+        current_polygon: Polygon = orient(next(remaining_nodes))
+        current_sites = graph.nodes[current_polygon]['sites']
+        if not current_sites and requirements:
+            *requirements, site_requirement = requirements
+            current_sites = frozenset({
+                Site(location=current_polygon.border.vertices[0],
+                     requirement=site_requirement)})
+        if not current_sites:
+            continue
+        pred_polys = graph.pred_polys(current_polygon)
+        requirement = sum(site.requirement for site in current_sites)
+        if len(current_sites) == 1 and pred_polys.area < requirement:
+            neighbor = graph.next_neighbor(current_polygon)
+            edge = graph[current_polygon][neighbor]['side']
+            site = list(current_sites)[0]
+            site = pseudosites_to_sites.get(site, site)
+            pseudosite = Site(location=midpoint(edge.start, edge.end),
+                              requirement=requirement - pred_polys.area)
+            pred_poly = union(*pred_polys)
+            area_incomplete_polygons[site].append(pred_poly)
+            graph.remove_nodes_from(pred_polys)
+            pseudosites_to_sites[pseudosite] = site
+            graph.nodes[neighbor]['sites'] |= {pseudosite}
+        elif len(current_sites) == 1 and pred_polys.area == requirement:
+            site = list(current_sites)[0]
+            graph.remove_nodes_from(pred_polys)
+            if site not in pseudosites_to_sites:
+                division.append((site, union(*pred_polys)))
+            else:
+                original_site = pseudosites_to_sites[site]
+                area = union(*pred_polys,
+                             *area_incomplete_polygons[original_site])
+                division.append((original_site, area))
+        else:
+            neighbor = graph.next_neighbor(current_polygon)
+            if neighbor is not None:
+                edge = graph[current_polygon][neighbor]['side']
+                extra_points = graph.neighbor_edges_vertices(current_polygon)
+                vertices = Multipoint(*{*current_polygon.border.vertices,
+                                        *extra_points,
+                                        *(site.location
+                                          for site in current_sites)})
+                vertices = order_by_edge(vertices, edge)
+            else:
+                sites_locations = [site.location for site in current_sites]
+                extra_points = (graph.neighbor_edges_vertices(current_polygon)
+                                if neighbor is not None else [])
+                vertices = Multipoint(*{*current_polygon.border.vertices,
+                                        *sites_locations,
+                                        *extra_points})
+                vertices = order_by_sites(vertices, sites_locations[0])
+            parts = nonconvex_divide(polygon=current_polygon,
+                                     vertices=vertices,
+                                     sites=current_sites,
+                                     graph=graph)
+            graph.remove_nodes_from(pred_polys)
+            graph = (graph.prepend_two(parts, neighbor) if len(parts) == 2
+                     else graph.prepend_three(parts, neighbor))
+        remaining_nodes = iter(graph.nodes)
+    return division
+
+
+def normalize_sites(sites: List[Site],
+                    *,
+                    polygon_area: Fraction) -> List[Site]:
     *sites, last_site = sites
-    sites = [Site(location=to_fractions(site.location),
-                  requirement=Fraction(site.requirement) * polygon_area)
-             for site in sites]
-    last_site_requirement = polygon_area - sum(site.requirement
-                                               for site in sites)
-    sites.append(Site(location=to_fractions(last_site.location),
-                      requirement=last_site_requirement))
+    locations = (to_fractions(site.location) for site in sites)
+    requirements = [site.requirement for site in sites]
+    requirements = normalize_requirements(requirements,
+                                          polygon_area=polygon_area)
+    sites = [Site(location=location,
+                  requirement=requirement)
+             for location, requirement in zip(locations, requirements)]
     return sites
+
+
+def normalize_requirements(requirements: List[Real],
+                           *,
+                           polygon_area: Fraction) -> List[Fraction]:
+    *requirements, last_requirement = requirements
+    requirements = [Fraction(requirement) * polygon_area
+                    for requirement in requirements]
+    last_requirement = polygon_area - sum(requirements)
+    requirements.append(last_requirement)
+    return requirements
 
 
 def to_graph(polygon: Polygon,
@@ -458,7 +570,7 @@ def order_by_edge(vertices: Multipoint,
 def nonconvex_divide(*,
                      polygon: Polygon,
                      vertices: List[Point],
-                     sites: Set[Site],
+                     sites: FrozenSet[Site],
                      graph: Graph
                      ) -> Union[Tuple[nx.DiGraph, nx.DiGraph],
                                 Tuple[nx.DiGraph, nx.DiGraph, nx.DiGraph]]:
@@ -476,10 +588,16 @@ def nonconvex_divide(*,
     head_indices = range(first_head_index, len(vertices))
     heads = vertices[first_head_index:]
     if len(sites) == 1:
+        sites_per_vertex = [sites] * len(vertices)
         requirements = [list(sites)[0].requirement] * len(vertices)
     else:
-        requirements = list(requirements_per_vertex(heads, sites))
-    for plr, head_index, requirement in zip(plrs, head_indices, requirements):
+        sites_per_vertex = list(to_sites_per_vertex(heads, sites))
+        requirements = [sum(site.requirement for site in sites_)
+                        for sites_ in sites_per_vertex]
+        # requirements = list(requirements_per_vertex(heads, sites))
+    for (plr, head_index,
+         requirement, right_sites) in zip(plrs, head_indices,
+                                          requirements, sites_per_vertex):
         if plr.area >= requirement:
             break
 
@@ -522,10 +640,12 @@ def nonconvex_divide(*,
             a = to_subgraph(predecessors=plr_1.predecessors,
                             old_root=polygon,
                             new_root=plr_1.root | triangle,
+                            sites=right_sites,
                             graph=graph)
             b = to_subgraph(predecessors=pll_1.predecessors,
                             old_root=polygon,
                             new_root=pll_1.root - triangle,
+                            sites=sites - right_sites,
                             graph=graph)
             return a, b
         pred_by_line = graph.pred_poly_by_line(polygon, edge)
@@ -543,10 +663,12 @@ def nonconvex_divide(*,
             a = to_subgraph(predecessors=plr_1.predecessors | pred_by_line,
                             old_root=polygon,
                             new_root=plr_1.root | triangle,
+                            sites=right_sites,
                             graph=graph)
             b = to_subgraph(predecessors=pll_1.predecessors - pred_by_line,
                             old_root=polygon,
                             new_root=pll_1.root - triangle,
+                            sites=sites - right_sites,
                             graph=graph)
             return a, b
         else:
@@ -556,14 +678,16 @@ def nonconvex_divide(*,
                     if pivot_index == 0
                     else Segment(high_area_point, low_area_point))
             pred_by_line = graph.pred_poly_by_line(polygon, edge)
-            a = graph.subgraph(pred_by_line).copy()
+            a = graph.subgraph(pred_by_line)
             b = to_subgraph(predecessors=plr_1.predecessors,
                             old_root=polygon,
                             new_root=plr_1.root | triangle,
+                            sites=right_sites,
                             graph=graph)
             c = to_subgraph(predecessors=pll_1.predecessors - pred_by_line,
                             old_root=polygon,
                             new_root=pll_1.root - triangle,
+                            sites=sites - right_sites,
                             graph=graph)
             return b, a, c
     else:
@@ -571,19 +695,22 @@ def nonconvex_divide(*,
         splitter = Segment(t, first_site_point)
         plr_1 = graph.plr(polygon, splitter)
         pll_1 = graph.pll(polygon, splitter)
+        first_site_set = sites_per_vertex[0]
         a = to_subgraph(predecessors=plr_1.predecessors,
                         old_root=polygon,
                         new_root=plr_1.root,
+                        sites=first_site_set,
                         graph=graph)
         b = to_subgraph(predecessors=pll_1.predecessors,
                         old_root=polygon,
                         new_root=pll_1.root,
+                        sites=sites - first_site_set,
                         graph=graph)
         return b, a
 
 
-def requirements_per_vertex(vertices: List[Point],
-                            sites: Set[Site]) -> Iterator[float]:
+def to_sites_per_vertex(vertices: List[Point],
+                        sites: FrozenSet[Site]) -> Iterator[FrozenSet[Site]]:
     """
     When rotating a line head over `domain_vertices`
     we need to get on each step a list of all previously encountered
@@ -596,52 +723,55 @@ def requirements_per_vertex(vertices: List[Point],
     sites_per_locations: Dict[Point, Site] = {site.location: site
                                               for site in sites}
     first_site = sites_per_locations[vertices[0]]
-    yield first_site.requirement
-    total_requirement = 0
+    yield frozenset({first_site})
+    accumulated_sites = frozenset()
     for vertex in vertices[:-1]:
         site = sites_per_locations.get(vertex)
         if site is not None:
-            total_requirement += site.requirement
-        yield total_requirement
+            accumulated_sites |= {site}
+        yield accumulated_sites
 
 
 def get_current_sites(polygon: Polygon,
                       pred_polys: PolygonsSet,
-                      sites: List[Site],
-                      graph: Graph) -> Set[Site]:
-    if not sites:
+                      sites: FrozenSet[Site],
+                      graph: Graph) -> FrozenSet[Site]:
+    preassigned_sites = frozenset({site for node in graph
+                                   for site in graph.nodes[node]['sites']})
+    if not sites and not preassigned_sites:
         raise ValueError("Got no sites to assign")
-    current_sites = {site for site in sites if site.location in polygon}
-    if len(current_sites) in {0, 1}:
-        return current_sites
-    sites_with_given_requirement = {site for site in sites
-                                    if pred_polys.area == site.requirement}
-    if len(sites_with_given_requirement) == 1:
-        return sites_with_given_requirement
-    all_nodes = set(graph.nodes)
+    current_preassigned_sites: FrozenSet[Site] = graph.nodes[polygon]['sites']
+    all_nodes = frozenset(graph.nodes)
     remaining_nodes = all_nodes - pred_polys
     if not remaining_nodes:
-        return current_sites
+        return current_preassigned_sites | sites
+    current_sites = frozenset({site for site in sites
+                               if site.location in polygon})
     shared_sites = {site for site in current_sites
                     if any(site.location in node for node in remaining_nodes)}
     polygon_sites_only = current_sites - shared_sites
-    if polygon_sites_only:
-        return polygon_sites_only
-    for node in list(graph.nodes)[1:]:
-        for site in current_sites:
-            if site.location in node:
-                return {site}
-    raise ValueError(f"Couldn't get any site for a node {polygon}")
+    if polygon_sites_only or current_preassigned_sites:
+        return polygon_sites_only | current_preassigned_sites
+    if len(current_sites) in {0, 1}:
+        return current_sites
+    sites_with_given_requirement = frozenset({
+        site for site in sites if pred_polys.area == site.requirement})
+    if len(sites_with_given_requirement) == 1:
+        return sites_with_given_requirement
+    return frozenset({list(current_sites)[0]})
 
 
 def to_subgraph(*,
                 predecessors: PolygonsSet,
                 old_root: Polygon,
                 new_root: Polygon,
+                sites: FrozenSet[Site],
                 graph: Graph) -> Graph:
     graph = graph.subgraph([old_root, *predecessors])
     for edge in graph.edges:
         if old_root in edge:
             neighbor = edge[1] if edge[0] == old_root else edge[0]
             graph.edges[edge]['side'] = new_root & neighbor
-    return nx.relabel_nodes(graph, {old_root: new_root})
+    graph = nx.relabel_nodes(graph, {old_root: new_root})
+    graph.nodes[new_root]['sites'] = sites
+    return graph

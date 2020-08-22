@@ -48,4 +48,4 @@ def test_nodes_connections(polygon_and_sites: Tuple[Polygon, List[Site]]
     is_split_into_several_parts = (is_not_triangle or has_extra_points
                                    or polygon.holes)
     if is_split_into_several_parts:
-        assert all(graph[node] for node in graph)
+        assert all(graph.nodes[node] for node in graph)

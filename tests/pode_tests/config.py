@@ -1,9 +1,4 @@
-from fractions import Fraction
-from functools import partial
-
-from hypothesis.strategies import (floats,
-                                   fractions,
-                                   integers)
+from hypothesis.strategies import integers
 
 
 MAX_COORDINATE_EXPONENT = 15

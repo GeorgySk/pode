@@ -3,16 +3,18 @@ from typing import (List,
                     Tuple)
 
 from gon.shaped import Polygon
-from hypothesis import given
+from hypothesis import (Verbosity,
+                        given,
+                        settings)
 
 from pode.pode import (Site,
-                       divide)
+                       divide_by_sites)
 from tests.strategies.geometry.composite import polygons_and_sites
 
 
 @given(polygons_and_sites)
+@settings(verbosity=Verbosity.verbose)
 def test_area(polygon_and_sites: Tuple[Polygon, List[Site]]) -> None:
     polygon, sites = polygon_and_sites
-    division = divide(*polygon_and_sites)
-    assert Fraction(polygon.area) == sum(part.area
-                                         for part in division.values())
+    division = divide_by_sites(*polygon_and_sites)
+    assert Fraction(polygon.area) == sum(part.area for _, part in division)
