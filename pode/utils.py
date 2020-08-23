@@ -5,6 +5,7 @@ from functools import (reduce,
 from statistics import mean
 from typing import (Iterator,
                     List,
+                    Sequence,
                     TypeVar,
                     Union)
 
@@ -18,6 +19,12 @@ from gon.linear import (Contour,
                         Segment)
 from gon.primitive import Point
 from gon.shaped import Polygon
+from sect.triangulation import constrained_delaunay_triangles
+
+from hints import (ContourType,
+                   ConvexPartsType,
+                   PointType,
+                   SegmentType)
 
 GeometryType = TypeVar('GeometryType', bound=Geometry)
 
@@ -183,3 +190,38 @@ def centroid(points: Multipoint) -> Point:
     mean_x = mean(point.x for point in points.points)
     mean_y = mean(point.y for point in points.points)
     return Point(mean_x, mean_y)
+
+
+def joined_constrained_delaunay_triangles(
+        border: ContourType,
+        holes: Sequence[ContourType] = (),
+        *,
+        extra_points: Sequence[PointType] = (),
+        extra_constraints: Sequence[SegmentType] = ()) -> ConvexPartsType:
+    """Joins polygons to form convex parts of greater size"""
+    triangles = constrained_delaunay_triangles(
+        border, holes,
+        extra_points=extra_points,
+        extra_constraints=extra_constraints)
+    polygons = [Polygon.from_raw((list(triangle), []))
+                for triangle in triangles]
+    initial_polygon = polygons.pop()
+    result = []
+    while True:
+        resulting_polygon = initial_polygon
+        for index, polygon in enumerate(iter(polygons)):
+            has_point_on_edge = any(Point(x, y) in resulting_polygon & polygon
+                                    for x, y in extra_points)
+            if has_point_on_edge:
+                continue
+            union_ = union(resulting_polygon, polygon)
+            if isinstance(union_, Polygon) and union_.is_convex:
+                polygons.pop(index)
+                resulting_polygon = union_
+        if resulting_polygon is not initial_polygon:
+            initial_polygon = resulting_polygon
+            continue
+        result.append(resulting_polygon.border.raw())
+        if not polygons:
+            return result
+        initial_polygon = polygons.pop()

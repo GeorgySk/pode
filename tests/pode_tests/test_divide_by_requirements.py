@@ -3,16 +3,16 @@ from numbers import Real
 from typing import List
 
 from gon.shaped import Polygon
-from hypothesis import (Verbosity,
-                        given,
-                        settings)
+from hypothesis import given
 from hypothesis.strategies import integers
 
+from hints import ConvexDivisor
 from pode.pode import divide_by_requirements
 from tests.pode_tests.config import (MAX_SITES_COUNT,
                                      MIN_REQUIREMENT,
                                      MIN_SITES_COUNT)
-from tests.strategies.geometry.base import polygons
+from tests.strategies.geometry.base import (convex_divisors,
+                                            polygons)
 from tests.strategies.sites import requirements
 
 
@@ -21,9 +21,11 @@ from tests.strategies.sites import requirements
                               max_value=MAX_SITES_COUNT).flatmap(
            lambda n: requirements(sum_=1,
                                   min_value=MIN_REQUIREMENT,
-                                  size=n)))
-@settings(verbosity=Verbosity.verbose)
+                                  size=n)),
+       convex_divisor=convex_divisors)
 def test_area(polygon: Polygon,
-              requirements_: List[Real]) -> None:
-    division = divide_by_requirements(polygon, requirements_)
-    assert Fraction(polygon.area) == sum(part.area for _, part in division)
+              requirements_: List[Real],
+              convex_divisor: ConvexDivisor) -> None:
+    division = divide_by_requirements(polygon, requirements_,
+                                      convex_divisor=convex_divisor)
+    assert Fraction(polygon.area) == sum(part.area for part in division)

@@ -283,6 +283,8 @@ def divide_by_sites(
         raise ValueError("Not all the sites lie in the polygon.")
     if sum(site.requirement for site in sites) != 1:
         raise ValueError("Area requirements should sum up to 1.")
+    if len(set(site.location for site in sites)) != len(sites):
+        raise ValueError("Sites cannot share their locations.")
     if len(sites) == 1:
         return [(sites[0], polygon)]
     if any(site.requirement < 0.01 for site in sites):
@@ -366,7 +368,7 @@ def divide_by_requirements(
         requirements: List[Real],
         *,
         convex_divisor: ConvexDivisor = constrained_delaunay_triangles
-        ) -> List[Tuple[Site, Shaped]]:
+        ) -> List[Shaped]:
     """
     Divides given polygon for the given requirements
     :param polygon: input polygon
@@ -378,9 +380,7 @@ def divide_by_requirements(
     if sum(requirement for requirement in requirements) != 1:
         raise ValueError("Area requirements should sum up to 1.")
     if len(requirements) == 1:
-        site = Site(location=polygon.border.vertices[0],
-                    requirement=requirements[0])
-        return [(site, polygon)]
+        return [polygon]
     if any(requirement < 0.01 for requirement in requirements):
         raise ValueError("Requirements are currently limited to be "
                          "greater than 0.01")
@@ -424,12 +424,12 @@ def divide_by_requirements(
             site = list(current_sites)[0]
             graph.remove_nodes_from(pred_polys)
             if site not in pseudosites_to_sites:
-                division.append((site, union(*pred_polys)))
+                division.append(union(*pred_polys))
             else:
                 original_site = pseudosites_to_sites[site]
-                area = union(*pred_polys,
-                             *area_incomplete_polygons[original_site])
-                division.append((original_site, area))
+                division.append(
+                    union(*pred_polys,
+                          *area_incomplete_polygons[original_site]))
         else:
             neighbor = graph.next_neighbor(current_polygon)
             if neighbor is not None:

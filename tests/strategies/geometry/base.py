@@ -10,6 +10,7 @@ from hypothesis.strategies import (SearchStrategy,
                                    sampled_from,
                                    sets)
 from hypothesis_geometry import planar
+from sect.triangulation import constrained_delaunay_triangles
 
 from tests.pode_tests.config import (MAX_CONTOUR_SIZE,
                                      MAX_COORDINATE,
@@ -17,6 +18,7 @@ from tests.pode_tests.config import (MAX_CONTOUR_SIZE,
                                      MIN_CONTOUR_SIZE,
                                      MIN_COORDINATE,
                                      coordinates_strategies_factories)
+from utils import joined_constrained_delaunay_triangles
 
 T = TypeVar('T')
 
@@ -61,3 +63,5 @@ unique_points_pairs = builds(tuple,
                              sets(_fraction_points,
                                   min_size=2,
                                   max_size=2))
+convex_divisors = sampled_from([constrained_delaunay_triangles,
+                                joined_constrained_delaunay_triangles])

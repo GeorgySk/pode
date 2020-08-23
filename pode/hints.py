@@ -6,8 +6,9 @@ from typing import (List,
 
 PointType = Tuple[Real, Real]
 ContourType = Sequence[PointType]
-SegmentsType = Sequence[Tuple[PointType, PointType]]
+SegmentType = Tuple[PointType, PointType]
 ConvexPartsType = List[Sequence[PointType]]
+PolygonType = Tuple[ContourType, Sequence[ContourType]]
 
 
 class ConvexDivisor(Protocol):
@@ -16,5 +17,6 @@ class ConvexDivisor(Protocol):
                  holes: Sequence[ContourType] = (),
                  *,
                  extra_points: ContourType = (),
-                 extra_constraints: SegmentsType = ()) -> ConvexPartsType:
+                 extra_constraints: Sequence[SegmentType] = ()
+                 ) -> ConvexPartsType:
         ...

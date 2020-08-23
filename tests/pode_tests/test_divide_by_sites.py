@@ -3,18 +3,20 @@ from typing import (List,
                     Tuple)
 
 from gon.shaped import Polygon
-from hypothesis import (Verbosity,
-                        given,
-                        settings)
+from hypothesis import given
 
+from hints import ConvexDivisor
 from pode.pode import (Site,
                        divide_by_sites)
+from tests.strategies.geometry.base import convex_divisors
 from tests.strategies.geometry.composite import polygons_and_sites
 
 
-@given(polygons_and_sites)
-@settings(verbosity=Verbosity.verbose)
-def test_area(polygon_and_sites: Tuple[Polygon, List[Site]]) -> None:
+@given(polygon_and_sites=polygons_and_sites,
+       convex_divisor=convex_divisors)
+def test_area(polygon_and_sites: Tuple[Polygon, List[Site]],
+              convex_divisor: ConvexDivisor) -> None:
     polygon, sites = polygon_and_sites
-    division = divide_by_sites(*polygon_and_sites)
+    division = divide_by_sites(*polygon_and_sites,
+                               convex_divisor=convex_divisor)
     assert Fraction(polygon.area) == sum(part.area for _, part in division)
