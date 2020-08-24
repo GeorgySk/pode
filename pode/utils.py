@@ -21,10 +21,10 @@ from gon.primitive import Point
 from gon.shaped import Polygon
 from sect.triangulation import constrained_delaunay_triangles
 
-from hints import (ContourType,
-                   ConvexPartsType,
-                   PointType,
-                   SegmentType)
+from pode.hints import (ContourType,
+                        ConvexPartsType,
+                        PointType,
+                        SegmentType)
 
 GeometryType = TypeVar('GeometryType', bound=Geometry)
 
