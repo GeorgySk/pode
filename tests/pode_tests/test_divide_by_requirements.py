@@ -23,9 +23,10 @@ from tests.strategies.sites import requirements
                                   min_value=MIN_REQUIREMENT,
                                   size=n)),
        convex_divisor=convex_divisors)
-def test_area(polygon: Polygon,
-              requirements_: List[Real],
-              convex_divisor: ConvexDivisor) -> None:
+def test_partitions(polygon: Polygon,
+                    requirements_: List[Real],
+                    convex_divisor: ConvexDivisor) -> None:
     division = divide_by_requirements(polygon, requirements_,
                                       convex_divisor=convex_divisor)
+    assert len(division) == len(requirements_)
     assert Fraction(polygon.area) == sum(part.area for part in division)

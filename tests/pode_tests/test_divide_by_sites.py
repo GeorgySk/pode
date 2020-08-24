@@ -14,9 +14,10 @@ from tests.strategies.geometry.composite import polygons_and_sites
 
 @given(polygon_and_sites=polygons_and_sites,
        convex_divisor=convex_divisors)
-def test_area(polygon_and_sites: Tuple[Polygon, List[Site]],
-              convex_divisor: ConvexDivisor) -> None:
+def test_partitions(polygon_and_sites: Tuple[Polygon, List[Site]],
+                    convex_divisor: ConvexDivisor) -> None:
     polygon, sites = polygon_and_sites
     division = divide_by_sites(*polygon_and_sites,
                                convex_divisor=convex_divisor)
+    assert len(division) == len(sites)
     assert Fraction(polygon.area) == sum(part.area for _, part in division)

@@ -462,7 +462,6 @@ def divide_by_requirements(
 def normalize_sites(sites: List[Site],
                     *,
                     polygon_area: Fraction) -> List[Site]:
-    *sites, last_site = sites
     locations = (to_fractions(site.location) for site in sites)
     requirements = [site.requirement for site in sites]
     requirements = normalize_requirements(requirements,
