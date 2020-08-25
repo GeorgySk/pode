@@ -33,6 +33,7 @@ from sect.triangulation import constrained_delaunay_triangles
 from pode.hints import ConvexDivisor
 from pode.utils import (centroid,
                         cut,
+                        edges,
                         midpoint,
                         orient,
                         shrink_collinear_vertices,
@@ -338,8 +339,7 @@ def divide_by_sites(
             neighbor = graph.next_neighbor(current_polygon)
             if neighbor is None:
                 sites_locations = [site.location for site in current_sites]
-                extra_points = (graph.neighbor_edges_vertices(current_polygon)
-                                if neighbor is not None else [])
+                extra_points = graph.neighbor_edges_vertices(current_polygon)
                 vertices = Multipoint(*{*current_polygon.border.vertices,
                                         *sites_locations,
                                         *extra_points})
@@ -442,8 +442,7 @@ def divide_by_requirements(
                 vertices = order_by_edge(vertices, edge)
             else:
                 sites_locations = [site.location for site in current_sites]
-                extra_points = (graph.neighbor_edges_vertices(current_polygon)
-                                if neighbor is not None else [])
+                extra_points = graph.neighbor_edges_vertices(current_polygon)
                 vertices = Multipoint(*{*current_polygon.border.vertices,
                                         *sites_locations,
                                         *extra_points})
@@ -485,6 +484,7 @@ def normalize_requirements(requirements: List[Real],
 
 def to_graph(polygon: Polygon,
              sites_locations: List[Point],
+             *,
              convex_divisor: ConvexDivisor) -> nx.Graph:
     """
     Converts polygon to a graph by dividing it to parts using
@@ -512,11 +512,20 @@ def to_graph(polygon: Polygon,
     if len(parts) == 1:
         graph.add_nodes_from(parts)
     else:
-        pairs: Iterator[Tuple[Polygon, Polygon]] = combinations(parts, 2)
-        for part, other in pairs:
-            intersection = part & other
-            if isinstance(intersection, Segment):
-                graph.add_edge(part, other, side=intersection)
+        if convex_divisor == constrained_delaunay_triangles:
+            parts_per_sides = defaultdict(set)
+            for part in parts:
+                for side in edges(part.border):
+                    parts_per_sides[side].add(part)
+            for side, parts in parts_per_sides.items():
+                if len(parts) == 2:
+                    graph.add_edge(*parts, side=side)
+        else:
+            pairs: Iterator[Tuple[Polygon, Polygon]] = combinations(parts, 2)
+            for part, other in pairs:
+                intersection = part & other
+                if isinstance(intersection, Segment):
+                    graph.add_edge(part, other, side=intersection)
     return graph
 
 

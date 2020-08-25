@@ -6,7 +6,7 @@ from gon.shaped import Polygon
 from hypothesis import given
 from hypothesis.strategies import integers
 
-from hints import ConvexDivisor
+from pode.hints import ConvexDivisor
 from pode.pode import divide_by_requirements
 from tests.pode_tests.config import (MAX_SITES_COUNT,
                                      MIN_REQUIREMENT,

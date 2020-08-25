@@ -5,7 +5,7 @@ from typing import (List,
 from gon.shaped import Polygon
 from hypothesis import given
 
-from hints import ConvexDivisor
+from pode.hints import ConvexDivisor
 from pode.pode import (Site,
                        divide_by_sites)
 from tests.strategies.geometry.base import convex_divisors

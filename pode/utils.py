@@ -210,8 +210,14 @@ def joined_constrained_delaunay_triangles(
     while True:
         resulting_polygon = initial_polygon
         for index, polygon in enumerate(iter(polygons)):
-            has_point_on_edge = any(Point(x, y) in resulting_polygon & polygon
-                                    for x, y in extra_points)
+            polygon_sides = set(edges(polygon.border))
+            common_side = next((edge
+                                for edge in edges(resulting_polygon.border)
+                                if edge in polygon_sides), None)
+            if common_side is None:
+                continue
+            has_point_on_edge = any(Point.from_raw(raw_point) in common_side
+                                    for raw_point in extra_points)
             if has_point_on_edge:
                 continue
             union_ = union(resulting_polygon, polygon)
