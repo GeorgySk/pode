@@ -6,7 +6,7 @@ from gon.shaped import Polygon
 from hypothesis import given
 from hypothesis.strategies import integers
 
-from pode.hints import ConvexDivisor
+from pode.hints import ConvexDivisorType
 from pode.pode import divide_by_requirements
 from tests.pode_tests.config import (MAX_SITES_COUNT,
                                      MIN_REQUIREMENT,
@@ -25,7 +25,7 @@ from tests.strategies.sites import requirements
        convex_divisor=convex_divisors)
 def test_partitions(polygon: Polygon,
                     requirements_: List[Real],
-                    convex_divisor: ConvexDivisor) -> None:
+                    convex_divisor: ConvexDivisorType) -> None:
     division = divide_by_requirements(polygon, requirements_,
                                       convex_divisor=convex_divisor)
     assert len(division) == len(requirements_)

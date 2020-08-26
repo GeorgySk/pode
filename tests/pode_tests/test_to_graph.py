@@ -8,7 +8,7 @@ from gon.shaped import Polygon
 from hypothesis import (assume,
                         given)
 
-from pode.hints import ConvexDivisor
+from pode.hints import ConvexDivisorType
 from pode.pode import (Site,
                        to_graph)
 from tests.strategies.geometry.base import convex_divisors
@@ -18,7 +18,7 @@ from tests.strategies.geometry.composite import polygons_and_sites
 @given(polygon_and_sites=polygons_and_sites,
        convex_divisor=convex_divisors)
 def test_polygon_reconstruction(polygon_and_sites: Tuple[Polygon, List[Site]],
-                                convex_divisor: ConvexDivisor) -> None:
+                                convex_divisor: ConvexDivisorType) -> None:
     polygon, sites = polygon_and_sites
     graph = to_graph(polygon,
                      [site.location for site in sites],
@@ -30,7 +30,7 @@ def test_polygon_reconstruction(polygon_and_sites: Tuple[Polygon, List[Site]],
 @given(polygon_and_sites=polygons_and_sites,
        convex_divisor=convex_divisors)
 def test_parts_intersections(polygon_and_sites: Tuple[Polygon, List[Site]],
-                             convex_divisor: ConvexDivisor) -> None:
+                             convex_divisor: ConvexDivisorType) -> None:
     polygon, sites = polygon_and_sites
     graph = to_graph(polygon,
                      [site.location for site in sites],
@@ -42,7 +42,7 @@ def test_parts_intersections(polygon_and_sites: Tuple[Polygon, List[Site]],
 @given(polygon_and_sites=polygons_and_sites,
        convex_divisor=convex_divisors)
 def test_nodes_connections(polygon_and_sites: Tuple[Polygon, List[Site]],
-                           convex_divisor: ConvexDivisor) -> None:
+                           convex_divisor: ConvexDivisorType) -> None:
     polygon, sites = polygon_and_sites
     graph = to_graph(polygon,
                      [site.location for site in sites],

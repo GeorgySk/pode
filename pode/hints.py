@@ -11,7 +11,7 @@ ConvexPartsType = List[Sequence[PointType]]
 PolygonType = Tuple[ContourType, Sequence[ContourType]]
 
 
-class ConvexDivisor(Protocol):
+class ConvexDivisorType(Protocol):
     def __call__(self,
                  border: ContourType,
                  holes: Sequence[ContourType] = (),

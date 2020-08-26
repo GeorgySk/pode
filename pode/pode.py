@@ -30,7 +30,7 @@ from gon.primitive import Point
 from gon.shaped import Polygon
 from sect.triangulation import constrained_delaunay_triangles
 
-from pode.hints import ConvexDivisor
+from pode.hints import ConvexDivisorType
 from pode.utils import (centroid,
                         cut,
                         edges,
@@ -280,7 +280,7 @@ def divide_by_sites(
         polygon: Polygon,
         sites: List[Site],
         *,
-        convex_divisor: ConvexDivisor = constrained_delaunay_triangles
+        convex_divisor: ConvexDivisorType = constrained_delaunay_triangles
         ) -> List[Tuple[Site, Shaped]]:
     """
     Divides given polygon for the given sites
@@ -377,7 +377,7 @@ def divide_by_requirements(
         polygon: Polygon,
         requirements: List[Real],
         *,
-        convex_divisor: ConvexDivisor = constrained_delaunay_triangles
+        convex_divisor: ConvexDivisorType = constrained_delaunay_triangles
         ) -> List[Shaped]:
     """
     Divides given polygon for the given requirements
@@ -495,7 +495,7 @@ def normalize_requirements(requirements: List[Real],
 def to_graph(polygon: Polygon,
              sites_locations: List[Point],
              *,
-             convex_divisor: ConvexDivisor) -> nx.Graph:
+             convex_divisor: ConvexDivisorType) -> nx.Graph:
     """
     Converts polygon to a graph by dividing it to parts using
     `convex_divisor` function. Resulting parts become nodes connected
