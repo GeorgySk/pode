@@ -112,10 +112,8 @@ def _(geometry: Polygon) -> Polygon:
                    list(map(to_fractions, geometry.holes)))
 
 
-def union(*geometries: Shaped) -> Union[Shaped, Empty]:
-    if not geometries:
-        return EMPTY
-    return reduce(operator.or_, geometries)
+def unite(*geometries: Shaped) -> Union[Shaped, Empty]:
+    return reduce(operator.or_, geometries, EMPTY)
 
 
 def midpoint(start: Point,
@@ -212,7 +210,7 @@ def joined_constrained_delaunay_triangles(
                                     for raw_point in extra_points)
             if has_point_on_edge:
                 continue
-            union_ = union(resulting_polygon, polygon)
+            union_ = unite(resulting_polygon, polygon)
             if isinstance(union_, Polygon) and union_.is_convex:
                 polygons.pop(index)
                 resulting_polygon = union_

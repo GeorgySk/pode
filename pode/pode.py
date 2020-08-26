@@ -39,7 +39,7 @@ from pode.utils import (cut,
                         shrink_collinear_vertices,
                         splitter_point,
                         to_fractions,
-                        union)
+                        unite)
 
 
 @dataclass(frozen=True)
@@ -330,7 +330,7 @@ def divide_by_sites(
             site = pseudosites_to_sites.get(site, site)
             pseudosite = Site(location=midpoint(edge.start, edge.end),
                               requirement=requirement - pred_polys.area)
-            pred_poly = union(*pred_polys)
+            pred_poly = unite(*pred_polys)
             area_incomplete_polygons[site].append(pred_poly)
             graph.remove_nodes_from(pred_polys)
             pseudosites_to_sites[pseudosite] = site
@@ -339,10 +339,10 @@ def divide_by_sites(
             site = list(current_sites)[0]
             graph.remove_nodes_from(pred_polys)
             if site not in pseudosites_to_sites:
-                division.append((site, union(*pred_polys)))
+                division.append((site, unite(*pred_polys)))
             else:
                 original_site = pseudosites_to_sites[site]
-                area = union(*pred_polys,
+                area = unite(*pred_polys,
                              *area_incomplete_polygons[original_site])
                 division.append((original_site, area))
         else:
@@ -425,7 +425,7 @@ def divide_by_requirements(
             site = pseudosites_to_sites.get(site, site)
             pseudosite = Site(location=midpoint(edge.start, edge.end),
                               requirement=requirement - pred_polys.area)
-            pred_poly = union(*pred_polys)
+            pred_poly = unite(*pred_polys)
             area_incomplete_polygons[site].append(pred_poly)
             graph.remove_nodes_from(pred_polys)
             pseudosites_to_sites[pseudosite] = site
@@ -434,11 +434,11 @@ def divide_by_requirements(
             site = list(current_sites)[0]
             graph.remove_nodes_from(pred_polys)
             if site not in pseudosites_to_sites:
-                division.append(union(*pred_polys))
+                division.append(unite(*pred_polys))
             else:
                 original_site = pseudosites_to_sites[site]
                 division.append(
-                    union(*pred_polys,
+                    unite(*pred_polys,
                           *area_incomplete_polygons[original_site]))
         else:
             neighbor = graph.next_neighbor(current_polygon)
