@@ -553,8 +553,8 @@ def order_by_sites(points: Multipoint,
         return atan2(point.y - points_centroid.y, point.x - points_centroid.x)
 
     ordered_points = sorted(points.points, key=angle)
-    site_index = next(index for index in range(len(ordered_points))
-                      if ordered_points[index] == site_location)
+    site_index = next(index for index, point in enumerate(ordered_points)
+                      if point == site_location)
     return ordered_points[site_index + 1:] + ordered_points[:site_index + 1]
 
 
