@@ -17,6 +17,7 @@ from tests.pode_tests.config import (MAX_CONTOUR_SIZE,
                                      MAX_HOLES_SIZE,
                                      MIN_CONTOUR_SIZE,
                                      MIN_COORDINATE,
+                                     MIN_HOLES_SIZE,
                                      coordinates_strategies_factories)
 from pode.utils import joined_constrained_delaunay_triangles
 
@@ -36,6 +37,7 @@ def coordinates_to_polygons(coordinates: SearchStrategy[Real]
         coordinates,
         min_size=MIN_CONTOUR_SIZE,
         max_size=MAX_CONTOUR_SIZE,
+        min_holes_size=MIN_HOLES_SIZE,
         max_holes_size=MAX_HOLES_SIZE))
 
 

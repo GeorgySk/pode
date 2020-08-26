@@ -87,6 +87,16 @@ class Graph(nx.DiGraph):
                 ordered_graph.edges[edge]['side'] = side
             else:
                 ordered_graph.edges[edge[::-1]]['side'] = side
+        # there can't be more than one outcoming edges from a node
+        for node in ordered_graph:
+            if len(ordered_graph[node]) in {0, 1}:
+                continue
+            most_immediate_successor = cls.next_neighbor(ordered_graph,
+                                                         node)
+            bad_edges_nodes = (set(ordered_graph[node])
+                               - {most_immediate_successor})
+            for neighbor in bad_edges_nodes:
+                ordered_graph.remove_edge(node, neighbor)
         for node in ordered_graph:
             ordered_graph.nodes[node].update({'sites': frozenset()})
         return ordered_graph
