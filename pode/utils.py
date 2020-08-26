@@ -25,6 +25,7 @@ from pode.hints import (ContourType,
                         SegmentType)
 
 GeometryType = TypeVar('GeometryType', bound=Geometry)
+T = TypeVar('T')
 
 
 def cut(contour: Contour,
@@ -222,3 +223,7 @@ def joined_constrained_delaunay_triangles(
         if not polygons:
             return result
         initial_polygon = polygons.pop()
+
+
+def rotate(sequence: List[T], index: int) -> List[T]:
+    return sequence[index:] + sequence[:index]

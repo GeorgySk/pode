@@ -35,6 +35,7 @@ from pode.utils import (cut,
                         edges,
                         midpoint,
                         orient,
+                        rotate,
                         shrink_collinear_vertices,
                         splitter_point,
                         to_fractions,
@@ -555,7 +556,7 @@ def order_by_sites(points: Multipoint,
     ordered_points = sorted(points.points, key=angle)
     site_index = next(index for index, point in enumerate(ordered_points)
                       if point == site_location)
-    return ordered_points[site_index + 1:] + ordered_points[:site_index + 1]
+    return rotate(ordered_points, site_index + 1)
 
 
 def order_by_edge(vertices: Multipoint,
@@ -581,7 +582,7 @@ def order_by_edge(vertices: Multipoint,
     last_index = (min(edge_start_index, edge_end_index)
                   if abs(edge_end_index - edge_start_index) == 1
                   else max(edge_start_index, edge_end_index))
-    return ordered_points[last_index + 1:] + ordered_points[:last_index + 1]
+    return rotate(ordered_points, last_index + 1)
 
 
 def nonconvex_divide(*,
