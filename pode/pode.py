@@ -33,7 +33,6 @@ from sect.triangulation import constrained_delaunay_triangles
 from pode.hints import ConvexDivisorType
 from pode.utils import (cut,
                         edges,
-                        midpoint,
                         orient,
                         rotate,
                         shrink_collinear_vertices,
@@ -328,7 +327,7 @@ def divide_by_sites(
             edge = graph[current_polygon][neighbor]['side']
             site = list(current_sites)[0]
             site = pseudosites_to_sites.get(site, site)
-            pseudosite = Site(location=midpoint(edge.start, edge.end),
+            pseudosite = Site(location=edge.centroid,
                               requirement=requirement - pred_polys.area)
             pred_poly = unite(*pred_polys)
             area_incomplete_polygons[site].append(pred_poly)
@@ -423,7 +422,7 @@ def divide_by_requirements(
             edge = graph[current_polygon][neighbor]['side']
             site = list(current_sites)[0]
             site = pseudosites_to_sites.get(site, site)
-            pseudosite = Site(location=midpoint(edge.start, edge.end),
+            pseudosite = Site(location=edge.centroid,
                               requirement=requirement - pred_polys.area)
             pred_poly = unite(*pred_polys)
             area_incomplete_polygons[site].append(pred_poly)
@@ -690,7 +689,7 @@ def nonconvex_divide(*,
                             graph=graph)
             return a, b
         else:
-            ps = midpoint(low_area_point, high_area_point)
+            ps = Multipoint(low_area_point, high_area_point).centroid
             triangle = Polygon(Contour([low_area_point, ps, pivot_point]))
             edge = (Segment(low_area_point, high_area_point)
                     if pivot_index == 0
@@ -709,7 +708,7 @@ def nonconvex_divide(*,
                             graph=graph)
             return b, a, c
     else:
-        t = midpoint(vertices[-1], vertices[0])
+        t = Multipoint(vertices[-1], vertices[0]).centroid
         splitter = Segment(t, first_site_point)
         plr_1 = graph.plr(polygon, splitter)
         pll_1 = graph.pll(polygon, splitter)

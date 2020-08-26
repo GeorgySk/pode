@@ -116,12 +116,6 @@ def unite(*geometries: Shaped) -> Union[Shaped, Empty]:
     return reduce(operator.or_, geometries, EMPTY)
 
 
-def midpoint(start: Point,
-             end: Point) -> Point:
-    """Returns coordinates of the middle of the input line"""
-    return Point((start.x + end.x) / 2, (start.y + end.y) / 2)
-
-
 def splitter_point(requirement: float,
                    pivot: Point,
                    low_area_point: Point,
