@@ -16,5 +16,5 @@ RUN pip install --force-reinstall -r requirements-tests.txt
 COPY README.md .
 COPY pytest.ini .
 COPY setup.py .
-COPY pode pode/
+COPY pode/ pode/
 COPY tests/ tests/
