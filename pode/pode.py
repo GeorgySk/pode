@@ -31,8 +31,7 @@ from gon.shaped import Polygon
 from sect.triangulation import constrained_delaunay_triangles
 
 from pode.hints import ConvexDivisorType
-from pode.utils import (centroid,
-                        cut,
+from pode.utils import (cut,
                         edges,
                         midpoint,
                         orient,
@@ -548,10 +547,10 @@ def order_by_sites(points: Multipoint,
     :param site_location: site that will be the last vertex
     :return: ordered union of polygon vertices and sites
     """
-    centroid_ = centroid(points)
+    points_centroid = points.centroid
 
     def angle(point: Point) -> float:
-        return atan2(point.y - centroid_.y, point.x - centroid_.x)
+        return atan2(point.y - points_centroid.y, point.x - points_centroid.x)
 
     ordered_points = sorted(points.points, key=angle)
     site_index = next(index for index in range(len(ordered_points))
@@ -571,10 +570,10 @@ def order_by_edge(vertices: Multipoint,
     :return: ordered union of polygon vertices and sites
     """
     points = cast(Multipoint, vertices | Multipoint(edge.start, edge.end))
-    centroid_ = centroid(points)
+    points_centroid = points.centroid
 
     def angle(point: Point) -> float:
-        return atan2(point.y - centroid_.y, point.x - centroid_.x)
+        return atan2(point.y - points_centroid.y, point.x - points_centroid.x)
 
     ordered_points = sorted(points.points, key=angle)
     edge_start_index = ordered_points.index(edge.start)

@@ -2,7 +2,6 @@ import operator
 from fractions import Fraction
 from functools import (reduce,
                        singledispatch)
-from statistics import mean
 from typing import (Iterator,
                     List,
                     Sequence,
@@ -13,7 +12,6 @@ from gon.angular import Orientation
 from gon.compound import Shaped
 from gon.degenerate import (EMPTY,
                             Empty)
-from gon.discrete import Multipoint
 from gon.geometry import Geometry
 from gon.linear import (Contour,
                         Segment)
@@ -183,13 +181,6 @@ def splitter_point(requirement: float,
 def orient(polygon: Polygon) -> Polygon:
     """To counterclockwise. No holes"""
     return Polygon(polygon.border.to_counterclockwise())
-
-
-def centroid(points: Multipoint) -> Point:
-    """Arithmetic mean position of the given points"""
-    mean_x = mean(point.x for point in points.points)
-    mean_y = mean(point.y for point in points.points)
-    return Point(mean_x, mean_y)
 
 
 def joined_constrained_delaunay_triangles(
