@@ -522,7 +522,7 @@ def to_graph(polygon: Polygon,
     if len(parts) == 1:
         graph.add_nodes_from(parts)
     else:
-        if convex_divisor == constrained_delaunay_triangles:
+        if convex_divisor is constrained_delaunay_triangles:
             parts_per_sides = defaultdict(set)
             for part in parts:
                 for side in edges(part.border):
