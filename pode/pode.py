@@ -21,7 +21,8 @@ import networkx as nx
 from gon.angular import Orientation
 from gon.compound import Shaped
 from gon.degenerate import (EMPTY,
-                            Empty)
+                            Empty,
+                            Maybe)
 from gon.discrete import Multipoint
 from gon.linear import (Contour,
                         Multisegment,
@@ -56,7 +57,7 @@ class PolygonsSet(FrozenSet[Polygon]):
 
 @dataclass(frozen=True)
 class RootedPolygons:
-    root: Union[Polygon, Empty]
+    root: Maybe[Polygon]
     predecessors: PolygonsSet
 
     @cached_property
@@ -88,7 +89,7 @@ class Graph(nx.DiGraph):
                 ordered_graph.edges[edge[::-1]]['side'] = side
         # there can't be more than one outcoming edges from a node
         for node in ordered_graph:
-            if len(ordered_graph[node]) in {0, 1}:
+            if len(ordered_graph[node]) < 2:
                 continue
             most_immediate_successor = cls.next_neighbor(ordered_graph,
                                                          node)
@@ -769,7 +770,7 @@ def get_current_sites(polygon: Polygon,
     polygon_sites_only = current_sites - shared_sites
     if polygon_sites_only or current_preassigned_sites:
         return polygon_sites_only | current_preassigned_sites
-    if len(current_sites) in {0, 1}:
+    if len(current_sites) < 2:
         return current_sites
     sites_with_given_requirement = frozenset({
         site for site in sites if pred_polys.area == site.requirement})
