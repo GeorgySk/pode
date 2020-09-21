@@ -8,8 +8,8 @@ pode
 [![](https://badge.fury.io/py/pode.svg)](https://badge.fury.io/py/pode "PyPI")
 
 In what follows
-- `python` is an alias for `python3.6` or any later
-version (`python3.7` and so on).
+- `python` is an alias for `python3.8` or any later
+version (`python3.9` and so on).
 
 Installation
 ------------

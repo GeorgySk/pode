@@ -3,12 +3,18 @@ ARG PYTHON_IMAGE_VERSION
 
 FROM ${PYTHON_IMAGE}:${PYTHON_IMAGE_VERSION}
 
+RUN pip install --upgrade pip setuptools
+
 WORKDIR /opt/pode
 
+COPY requirements.txt .
+RUN pip install --force-reinstall -r requirements.txt
+
+COPY requirements-tests.txt .
+RUN pip install --force-reinstall -r requirements-tests.txt
+
+COPY README.md .
+COPY pytest.ini .
+COPY setup.py .
 COPY pode/ pode/
 COPY tests/ tests/
-COPY README.md .
-COPY setup.py .
-COPY setup.cfg .
-
-RUN pip install -e .
