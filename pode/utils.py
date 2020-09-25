@@ -5,6 +5,7 @@ from functools import (reduce,
 from typing import (Iterator,
                     List,
                     Sequence,
+                    Tuple,
                     TypeVar,
                     Union)
 
@@ -219,3 +220,34 @@ def joined_constrained_delaunay_triangles(
 
 def rotate(sequence: List[T], index: int) -> List[T]:
     return sequence[index:] + sequence[:index]
+
+
+def order_convex_contour_points(points: List[Point]) -> List[Point]:
+    lowest_leftmost_point_index = 0
+    lowest_leftmost_point = points[lowest_leftmost_point_index]
+    for index, point in enumerate(points[1:], start=1):
+        if (point.y < lowest_leftmost_point.y
+                or point.y == lowest_leftmost_point.y
+                and point.x < lowest_leftmost_point.x):
+            lowest_leftmost_point_index = index
+            lowest_leftmost_point = point
+    points = (points[:lowest_leftmost_point_index]
+              + points[lowest_leftmost_point_index + 1:])
+
+    def cotangent(point: Point) -> Union[Fraction, float]:
+        dx = point.x - lowest_leftmost_point.x
+        dy = point.y - lowest_leftmost_point.y
+        return (-dx / dy if dy
+                else (float('-inf') if dx > 0 else float('inf')))
+
+    cotangents_per_point = {point: cotangent(point) for point in points}
+    max_tangent = max(cotangents_per_point.values())
+
+    def sorting_key(point: Point) -> Tuple[Union[Fraction, float], Fraction]:
+        tangent = cotangents_per_point[point]
+        distance = lowest_leftmost_point.distance_to(point)
+        factor = -1 if tangent == max_tangent else 1
+        return tangent, factor * distance
+
+    sorted_points = sorted(points, key=sorting_key)
+    return [lowest_leftmost_point, *sorted_points]

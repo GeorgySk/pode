@@ -23,6 +23,7 @@ from tests.pode_tests.config import (MAX_COORDINATE,
                                      MIN_REQUIREMENT,
                                      MIN_SITES_COUNT)
 from tests.strategies.geometry.base import (coordinates_strategies_factories,
+                                            fraction_coordinates,
                                             multipoints,
                                             polygons)
 from tests.strategies.sites import requirements
@@ -113,7 +114,41 @@ def _bounding_box(points: Iterable[Point]) -> Tuple[Real, Real, Real, Real]:
     return x_min, x_max, y_min, y_max
 
 
+@st.composite
+def _convex_contour_points(draw: Callable[[st.SearchStrategy[T]], T]
+                           ) -> List[Point]:
+    contour: Contour = draw(
+        st.builds(Contour.from_raw,
+                  planar.convex_contours(fraction_coordinates)))
+    fractions_lists = draw(st.lists(
+        st.lists(st.fractions(min_value=0,
+                              max_value=1)
+                 .filter(lambda x: x not in {0, 1}),
+                 unique=True).map(sorted),
+        min_size=len(contour.vertices),
+        max_size=len(contour.vertices)))
+    points = []
+    points_pairs = zip(contour.vertices,
+                       contour.vertices[1:] + contour.vertices[:1])
+
+    for (point, next_point), fractions_list in zip(points_pairs,
+                                                   fractions_lists):
+        points.append(point)
+        new_points = [interpolate(point, next_point, fraction)
+                      for fraction in fractions_list]
+        points.extend(new_points)
+    return points
+
+
+def interpolate(start: Point,
+                end: Point,
+                fraction: Fraction) -> Point:
+    return Point(start.x + (end.x - start.x) * fraction,
+                 start.y + (end.y - start.y) * fraction)
+
+
 contours_and_points = _contours_and_points()
 multipoints_and_segments = _multipoints_and_segments()
 polygons_and_sites = _polygons_and_sites()
 vertices_and_sites = _vertices_and_sites()
+convex_contour_points = _convex_contour_points()

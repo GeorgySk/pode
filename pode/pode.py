@@ -4,7 +4,6 @@ from fractions import Fraction
 from functools import cached_property
 from itertools import (chain,
                        combinations)
-from math import atan2
 from numbers import Real
 from typing import (DefaultDict,
                     Dict,
@@ -14,14 +13,12 @@ from typing import (DefaultDict,
                     List,
                     Optional,
                     Tuple,
-                    Union,
-                    cast)
+                    Union)
 
 import networkx as nx
 from gon.angular import Orientation
 from gon.compound import Shaped
 from gon.degenerate import (EMPTY,
-                            Empty,
                             Maybe)
 from gon.discrete import Multipoint
 from gon.linear import (Contour,
@@ -40,6 +37,7 @@ from pode.utils import (cut,
                         splitter_point,
                         to_fractions,
                         unite)
+from utils import order_convex_contour_points
 
 
 @dataclass(frozen=True)
@@ -350,17 +348,18 @@ def divide_by_sites(
             if neighbor is None:
                 sites_locations = [site.location for site in current_sites]
                 extra_points = graph.neighbor_edges_vertices(current_polygon)
-                vertices = Multipoint(*{*current_polygon.border.vertices,
-                                        *sites_locations,
-                                        *extra_points})
+                vertices = list({*current_polygon.border.vertices,
+                                 *sites_locations,
+                                 *extra_points})
                 vertices = order_by_sites(vertices, sites_locations[0])
             else:
                 edge = graph[current_polygon][neighbor]['side']
                 extra_points = graph.neighbor_edges_vertices(current_polygon)
-                vertices = Multipoint(*{*current_polygon.border.vertices,
-                                        *extra_points,
-                                        *(site.location
-                                          for site in current_sites)})
+                vertices = list({*current_polygon.border.vertices,
+                                 *extra_points,
+                                 *(site.location for site in current_sites),
+                                 edge.start,
+                                 edge.end})
                 vertices = order_by_edge(vertices, edge)
             parts = nonconvex_divide(polygon=current_polygon,
                                      vertices=vertices,
@@ -445,17 +444,18 @@ def divide_by_requirements(
             if neighbor is not None:
                 edge = graph[current_polygon][neighbor]['side']
                 extra_points = graph.neighbor_edges_vertices(current_polygon)
-                vertices = Multipoint(*{*current_polygon.border.vertices,
-                                        *extra_points,
-                                        *(site.location
-                                          for site in current_sites)})
+                vertices = list({*current_polygon.border.vertices,
+                                 *extra_points,
+                                 *(site.location for site in current_sites),
+                                 edge.start,
+                                 edge.end})
                 vertices = order_by_edge(vertices, edge)
             else:
                 sites_locations = [site.location for site in current_sites]
                 extra_points = graph.neighbor_edges_vertices(current_polygon)
-                vertices = Multipoint(*{*current_polygon.border.vertices,
-                                        *sites_locations,
-                                        *extra_points})
+                vertices = list({*current_polygon.border.vertices,
+                                 *sites_locations,
+                                 *extra_points})
                 vertices = order_by_sites(vertices, sites_locations[0])
             parts = nonconvex_divide(polygon=current_polygon,
                                      vertices=vertices,
@@ -539,27 +539,22 @@ def to_graph(polygon: Polygon,
     return graph
 
 
-def order_by_sites(points: Multipoint,
+def order_by_sites(vertices: List[Point],
                    site_location: Point) -> List[Point]:
     """
     Orders vertices of the convex polygon and the sites in a
     counterclockwise manner so that the last vertex would be a site.
-    :param points: convex polygon's vertices and sites
+    :param vertices: convex polygon's vertices and sites
     :param site_location: site that will be the last vertex
     :return: ordered union of polygon vertices and sites
     """
-    points_centroid = points.centroid
-
-    def angle(point: Point) -> float:
-        return atan2(point.y - points_centroid.y, point.x - points_centroid.x)
-
-    ordered_points = sorted(points.points, key=angle)
-    site_index = next(index for index, point in enumerate(ordered_points)
+    ordered_vertices = order_convex_contour_points(vertices)
+    site_index = next(index for index, point in enumerate(ordered_vertices)
                       if point == site_location)
-    return rotate(ordered_points, site_index + 1)
+    return rotate(ordered_vertices, site_index + 1)
 
 
-def order_by_edge(vertices: Multipoint,
+def order_by_edge(vertices: List[Point],
                   edge: Segment) -> List[Point]:
     """
     Orders vertices of the convex polygon and the sites in a
@@ -570,13 +565,7 @@ def order_by_edge(vertices: Multipoint,
     :param edge: edge to the next neighbor
     :return: ordered union of polygon vertices and sites
     """
-    points = cast(Multipoint, vertices | Multipoint(edge.start, edge.end))
-    points_centroid = points.centroid
-
-    def angle(point: Point) -> float:
-        return atan2(point.y - points_centroid.y, point.x - points_centroid.x)
-
-    ordered_points = sorted(points.points, key=angle)
+    ordered_points = order_convex_contour_points(vertices)
     edge_start_index = ordered_points.index(edge.start)
     edge_end_index = ordered_points.index(edge.end)
     last_index = (min(edge_start_index, edge_end_index)

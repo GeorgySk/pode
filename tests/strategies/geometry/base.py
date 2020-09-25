@@ -59,8 +59,8 @@ fraction_triangles = builds(Polygon.from_raw, planar.polygons(
     fractions(MIN_COORDINATE, MAX_COORDINATE),
     max_size=TRIANGULAR_CONTOUR_SIZE))
 multipoints = coordinates_strategies.flatmap(coordinates_to_multipoints)
-_fraction_coordinates = fractions(MIN_COORDINATE, MAX_COORDINATE)
-_fraction_points = builds(Point, _fraction_coordinates, _fraction_coordinates)
+fraction_coordinates = fractions(MIN_COORDINATE, MAX_COORDINATE)
+_fraction_points = builds(Point, fraction_coordinates, fraction_coordinates)
 unique_points_pairs = builds(tuple,
                              sets(_fraction_points,
                                   min_size=2,
