@@ -43,7 +43,7 @@ from pode.utils import (cut,
 class Requirement(NamedTuple):
     """Area requirement with an optional point (site)"""
     area: Real
-    point: Optional[Point]
+    point: Optional[Point] = None
 
 
 class PolygonsSet(FrozenSet[Polygon]):

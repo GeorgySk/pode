@@ -120,7 +120,8 @@ def _vertices_and_sites(draw: Callable[[st.SearchStrategy[T]], T]
     vertices_subset = [multipoint.points[0],
                        *draw(st.permutations(multipoint.points[1:]))[:slice_]]
     requirements_ = draw(requirements(sum_=1,
-                                      size=slice_ + 1))
+                                      size=slice_ + 1,
+                                      min_value=MIN_REQUIREMENT))
     sites = {Requirement(requirement, point=vertex)
              for vertex, requirement in zip(vertices_subset, requirements_)}
     return multipoint.points, sites

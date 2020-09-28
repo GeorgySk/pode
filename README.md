@@ -1,11 +1,31 @@
 pode
 ===========
 
+
 [![](https://travis-ci.org/LostFan123/pode.svg?branch=master)](https://travis-ci.org/LostFan123/pode "Travis CI")
 [![](https://dev.azure.com/skorobogatov/pode/_apis/build/status/LostFan123.pode?branchName=master)](https://dev.azure.com/skorobogatov/pode/_build/latest?definitionId=2&branchName=master "Azure Pipelines")
 [![](https://codecov.io/gh/LostFan123/pode/branch/master/graph/badge.svg)](https://codecov.io/gh/LostFan123/pode "Codecov")
 [![](https://img.shields.io/github/license/LostFan123/pode.svg)](https://github.com/LostFan123/pode/blob/master/LICENSE "License")
 [![](https://badge.fury.io/py/pode.svg)](https://badge.fury.io/py/pode "PyPI")
+
+Summary
+-------
+
+`pode` is a Python library that implements an algorithm of 
+[Hert, S. and Lumelsky, V., 1998](https://www.worldscientific.com/doi/abs/10.1142/S0218195998000230)
+for a polygon decomposition into separate parts depending on the area 
+requirements.
+
+Main features are
+- all calculations are robust for floating point numbers
+& precise for integral numbers (like `int`)
+- support for partition of convex/nonconvex polygons with/without holes
+- support for anchored partition, free partition, and a mixture of both 
+where anchored polygon partition requires the resulting polygon parts to 
+contain specified points called "anchors" or "sites", and free partition does 
+not have any constraints on the resulting geometries. 
+- most of the code is covered with property-based tests.
+---
 
 In what follows
 - `python` is an alias for `python3.8` or any later
@@ -38,6 +58,30 @@ Install:
   ```bash
   python setup.py install
   ```
+
+Usage
+-----
+```python
+>>> from pode import divide, Point, Polygon, Requirement
+>>> polygon = Polygon.from_raw(([(0, 0), (1, 0), (1, 1), (0, 1)], []))
+>>> requirements = [Requirement(0.5), Requirement(0.5, point=Point(1, 1))]
+>>> parts = divide(polygon, requirements)
+assert parts[0].area == parts[1].area < polygon.area
+assert Point(1, 1) in parts[1]
+```
+Currently, the algorithm uses constrained Delaunay triangulation to form convex 
+parts which are used internally for a convex-polygon partition.
+This triangulation, however, affects the resulting partition. The resulting 
+parts can have zigzag pattern separating different parts. In this way, the 
+solution can be far from being optimal in sense of the number of sides of the
+resulting polygons. Alternatively, we implemented a helper function that would 
+join neighboring triangles if they form a larger convex part. It can be 
+imported as `from pode import joined_constrained_delaunay_triangles` and used
+as `divide(polygon requirements, joined_constrained_delaunay_triangles)`. But, 
+in the future, a better algorithm should be implemented, like 
+[Greene, D.H., 1983](https://www.goodreads.com/book/show/477772.Advances_in_Computing_Research_Volume_1) 
+or [Chazelle, B. and Dobkin, D., 1979](https://dl.acm.org/doi/abs/10.1145/800135.804396).
+
 
 Development
 -----------

@@ -2,9 +2,7 @@ from typing import (List,
                     Tuple)
 
 from gon.shaped import Polygon
-from hypothesis import (Verbosity,
-                        given,
-                        settings)
+from hypothesis import given
 
 from pode.hints import ConvexDivisorType
 from pode.pode import (Requirement,
@@ -16,7 +14,6 @@ from tests.strategies.geometry.composite import polygons_and_requirements
 
 @given(polygon_and_requirements=polygons_and_requirements,
        convex_divisor=convex_divisors)
-@settings(verbosity=Verbosity.verbose)
 def test_partitions(polygon_and_requirements: Tuple[Polygon,
                                                     List[Requirement]],
                     convex_divisor: ConvexDivisorType) -> None:
