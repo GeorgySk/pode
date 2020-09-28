@@ -18,7 +18,7 @@ T = TypeVar('T')
 def _unordered_graphs(draw: Callable[[SearchStrategy[T]], T]) -> nx.Graph:
     polygon, sites = draw(polygons_and_sites)
     return to_graph(polygon,
-                    [site.location for site in sites],
+                    [site.point for site in sites],
                     convex_divisor=constrained_delaunay_triangles)
 
 
