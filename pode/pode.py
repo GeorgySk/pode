@@ -31,13 +31,13 @@ from sect.triangulation import constrained_delaunay_triangles
 from pode.hints import ConvexDivisorType
 from pode.utils import (cut,
                         edges,
+                        order_convex_contour_points,
                         orient,
                         rotate,
                         shrink_collinear_vertices,
                         splitter_point,
                         to_fractions,
                         unite)
-from utils import order_convex_contour_points
 
 
 class Requirement(NamedTuple):

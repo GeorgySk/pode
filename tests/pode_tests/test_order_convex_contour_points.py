@@ -3,9 +3,9 @@ from typing import List
 from gon.primitive import Point
 from hypothesis import given
 
+from pode.utils import order_convex_contour_points
 from tests.utils import cyclic_equivalence
 from tests.strategies.geometry.composite import convex_contour_points
-from utils import order_convex_contour_points
 
 
 @given(convex_contour_points)

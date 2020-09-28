@@ -9,9 +9,9 @@ from hypothesis import (Verbosity,
 from pode.hints import ConvexDivisorType
 from pode.pode import (Requirement,
                        divide)
+from pode.utils import to_fractions
 from tests.strategies.geometry.base import convex_divisors
 from tests.strategies.geometry.composite import polygons_and_requirements
-from utils import to_fractions
 
 
 @given(polygon_and_requirements=polygons_and_requirements,
