@@ -6,7 +6,6 @@ from typing import (List,
 
 from gon.discrete import Multipoint
 from gon.linear import Contour
-from gon.primitive import Point
 from gon.shaped import Polygon
 from hypothesis import strategies as st
 from hypothesis_geometry import planar
@@ -26,6 +25,7 @@ TRIANGULAR_CONTOUR_SIZE = 3
 RECTANGLE_CONTOUR_SIZE = 4
 MIN_PARTITION_SIZE = 1
 
+nonnegative_integers = st.integers(min_value=0)
 fractions = st.fractions(MIN_COORDINATE, MAX_COORDINATE)
 raw_fraction_contours = planar.contours(fractions)
 fractions_contours = st.builds(Contour.from_raw, raw_fraction_contours)
@@ -60,6 +60,7 @@ def coordinates_to_multipoints(coordinates: st.SearchStrategy[Real]
 
 
 polygons = coordinates_strategies.flatmap(coordinates_to_polygons)
+fractions_polygons = coordinates_to_polygons(fractions)
 multipoints = coordinates_strategies.flatmap(coordinates_to_multipoints)
 
 
