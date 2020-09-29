@@ -18,13 +18,12 @@ from hypothesis_geometry import planar
 
 from pode.pode import Requirement
 from pode.utils import edges
-from tests.pode_tests.config import (MAX_COORDINATE,
-                                     MAX_SITES_COUNT,
-                                     MIN_COORDINATE,
+from tests.pode_tests.config import (MAX_SITES_COUNT,
                                      MIN_REQUIREMENT,
                                      MIN_SITES_COUNT)
 from tests.strategies.geometry.base import (coordinates_strategies_factories,
-                                            fraction_coordinates,
+                                            fractions,
+                                            fractions_contours,
                                             multipoints,
                                             polygons)
 from tests.strategies.sites import requirements
@@ -35,14 +34,12 @@ T = TypeVar('T')
 @st.composite
 def _contours_and_points(draw: Callable[[st.SearchStrategy[T]], T]
                          ) -> Tuple[Contour, Point, Point]:
-    fraction_contours = planar.contours(st.fractions(MIN_COORDINATE,
-                                                     MAX_COORDINATE))
-    contour: Contour = draw(st.builds(Contour.from_raw, fraction_contours))
+    contour: Contour = draw(fractions_contours)
     segments = list(edges(contour))
+    unit_interval_floats = st.floats(0, 1, exclude_max=True)
+    unit_interval_fractions = st.builds(Fraction, unit_interval_floats)
     segments_and_fractions = st.tuples(st.sampled_from(segments),
-                                       st.builds(Fraction,
-                                                 st.floats(0, 1,
-                                                           exclude_max=True)))
+                                       unit_interval_fractions)
     segments_and_fractions_pair = draw(st.sets(segments_and_fractions,
                                                min_size=2,
                                                max_size=2))
@@ -56,9 +53,7 @@ def _contours_and_points(draw: Callable[[st.SearchStrategy[T]], T]
 @st.composite
 def _multipoints_and_segments(draw: Callable[[st.SearchStrategy[T]], T]
                               ) -> Tuple[Multipoint, Segment]:
-    fraction_contours = planar.contours(st.fractions(MIN_COORDINATE,
-                                                     MAX_COORDINATE))
-    contour: Contour = draw(st.builds(Contour.from_raw, fraction_contours))
+    contour: Contour = draw(fractions_contours)
     segments = list(edges(contour))
     multipoint = Multipoint(*contour.vertices)
     edge = draw(st.sampled_from(segments))
@@ -140,9 +135,8 @@ def _bounding_box(points: Iterable[Point]) -> Tuple[Real, Real, Real, Real]:
 @st.composite
 def _convex_contour_points(draw: Callable[[st.SearchStrategy[T]], T]
                            ) -> List[Point]:
-    contour: Contour = draw(
-        st.builds(Contour.from_raw,
-                  planar.convex_contours(fraction_coordinates)))
+    contour: Contour = draw(st.builds(Contour.from_raw,
+                                      planar.convex_contours(fractions)))
     fractions_lists = draw(st.lists(
         st.lists(st.fractions(min_value=0,
                               max_value=1)

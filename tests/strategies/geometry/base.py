@@ -2,6 +2,7 @@ from numbers import Real
 from typing import TypeVar
 
 from gon.discrete import Multipoint
+from gon.linear import Contour
 from gon.primitive import Point
 from gon.shaped import Polygon
 from hypothesis import strategies as st
@@ -21,6 +22,10 @@ T = TypeVar('T')
 
 TRIANGULAR_CONTOUR_SIZE = 3
 RECTANGLE_CONTOUR_SIZE = 4
+
+fractions = st.fractions(MIN_COORDINATE, MAX_COORDINATE)
+raw_fraction_contours = planar.contours(fractions)
+fractions_contours = st.builds(Contour.from_raw, raw_fraction_contours)
 
 coordinates_strategies = st.sampled_from([
     factory(MIN_COORDINATE, MAX_COORDINATE)
@@ -52,11 +57,9 @@ def coordinates_to_multipoints(coordinates: st.SearchStrategy[Real]
 
 polygons = coordinates_strategies.flatmap(coordinates_to_polygons)
 fraction_triangles = st.builds(Polygon.from_raw, planar.polygons(
-    st.fractions(MIN_COORDINATE, MAX_COORDINATE),
-    max_size=TRIANGULAR_CONTOUR_SIZE))
+    fractions, max_size=TRIANGULAR_CONTOUR_SIZE))
 multipoints = coordinates_strategies.flatmap(coordinates_to_multipoints)
-fraction_coordinates = st.fractions(MIN_COORDINATE, MAX_COORDINATE)
-_fraction_points = st.builds(Point, fraction_coordinates, fraction_coordinates)
+_fraction_points = st.builds(Point, fractions, fractions)
 unique_points_pairs = st.builds(tuple,
                                 st.sets(_fraction_points,
                                         min_size=2,
