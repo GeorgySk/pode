@@ -4,17 +4,16 @@ from gon.linear import (Contour,
                         Segment)
 from gon.shaped import Polygon
 from hypothesis import (assume,
-                        given)
-from hypothesis.strategies import (booleans,
-                                   fractions)
+                        given,
+                        strategies as st)
 
 from pode.pode import splitter_point
 from tests.strategies.geometry.base import fraction_triangles
 
 
 @given(triangle=fraction_triangles,
-       is_counterclockwise=booleans(),
-       fraction=fractions(0, 1))
+       is_counterclockwise=st.booleans(),
+       fraction=st.fractions(0, 1))
 def test_area(triangle: Polygon,
               is_counterclockwise: bool,
               fraction: Fraction) -> None:
@@ -32,8 +31,8 @@ def test_area(triangle: Polygon,
 
 
 @given(triangle=fraction_triangles,
-       is_counterclockwise=booleans(),
-       fraction=fractions(0, 1))
+       is_counterclockwise=st.booleans(),
+       fraction=st.fractions(0, 1))
 def test_point(triangle: Polygon,
                is_counterclockwise: bool,
                fraction: Fraction) -> None:

@@ -1,13 +1,12 @@
-from hypothesis import given
-from hypothesis.strategies import integers
+from hypothesis import given, strategies as st
 
 from pode.pode import Graph
 from tests.strategies.graphs import graphs
 
 
 @given(graph=graphs,
-       index=integers(min_value=0),
-       other_index=integers(min_value=0))
+       index=st.integers(min_value=0),
+       other_index=st.integers(min_value=0))
 def test_subset(graph: Graph,
                 index: int,
                 other_index: int) -> None:

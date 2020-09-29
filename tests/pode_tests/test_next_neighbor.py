@@ -1,7 +1,7 @@
 from hypothesis import (assume,
                         given,
-                        note)
-from hypothesis.strategies import integers
+                        note,
+                        strategies as st)
 
 from pode.pode import Graph
 from tests.strategies.graphs import graphs
@@ -27,7 +27,7 @@ def test_first_node(graph: Graph) -> None:
 
 
 @given(graph=graphs,
-       index=integers(min_value=0))
+       index=st.integers(min_value=0))
 def test_order(graph: Graph,
                index: int) -> None:
     assume(len(graph) > 1)

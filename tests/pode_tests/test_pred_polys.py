@@ -1,6 +1,6 @@
 from hypothesis import (given,
                         note)
-from hypothesis.strategies import integers
+from hypothesis import strategies as st
 
 from pode.pode import Graph
 from tests.strategies.graphs import graphs
@@ -18,7 +18,7 @@ def test_first_node(graph: Graph) -> None:
 
 
 @given(graph=graphs,
-       index=integers(min_value=0))
+       index=st.integers(min_value=0))
 def test_node_presence(graph: Graph,
                        index: int) -> None:
     nodes = list(graph)
@@ -31,7 +31,7 @@ def test_node_presence(graph: Graph,
 
 
 @given(graph=graphs,
-       index=integers(min_value=0))
+       index=st.integers(min_value=0))
 def test_predecessors(graph: Graph,
                       index: int) -> None:
     nodes = list(graph)
