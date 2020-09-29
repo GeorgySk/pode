@@ -1,26 +1,25 @@
-from typing import (Callable,
-                    TypeVar)
+from typing import (List,
+                    Tuple)
 
 import networkx as nx
-from hypothesis.strategies import (SearchStrategy,
-                                   builds,
-                                   composite)
-from sect.triangulation import constrained_delaunay_triangles
+from gon.primitive import Point
+from gon.shaped import Polygon
+from hypothesis import strategies as st
 
+from pode.hints import ConvexDivisorType
 from pode.pode import (Graph,
                        to_graph)
-from tests.strategies.geometry.composite import polygons_and_sites
-
-T = TypeVar('T')
-
-
-@composite
-def _unordered_graphs(draw: Callable[[SearchStrategy[T]], T]) -> nx.Graph:
-    polygon, sites = draw(polygons_and_sites)
-    return to_graph(polygon,
-                    [site.point for site in sites],
-                    convex_divisor=constrained_delaunay_triangles)
+from tests.strategies.geometry.base import convex_divisors
+from tests.strategies.geometry.composite import fraction_polygons_and_points
 
 
-unordered_graphs = _unordered_graphs()
-graphs = builds(Graph.from_undirected, unordered_graphs)
+def _to_graph(polygon_and_points: Tuple[Polygon, List[Point]],
+              convex_divisor: ConvexDivisorType) -> nx.Graph:
+    polygon, points = polygon_and_points
+    return to_graph(polygon, points, convex_divisor=convex_divisor)
+
+
+unordered_graphs = st.builds(_to_graph,
+                             fraction_polygons_and_points,
+                             convex_divisors)
+graphs = st.builds(Graph.from_undirected, unordered_graphs)

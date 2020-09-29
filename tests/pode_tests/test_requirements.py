@@ -2,20 +2,18 @@ from math import floor
 from numbers import Real
 
 from hypothesis import (given,
-                        strategies)
-from hypothesis.strategies import DataObject
+                        strategies as st)
 
-from tests.strategies.sites import (MIN_PARTITION_SIZE,
-                                    requirements)
+from tests.strategies.geometry.base import (MIN_PARTITION_SIZE,
+                                            requirements)
 
 
-@given(strategies.data(), strategies.floats(0, 100))
-def test_to_partitions(data: DataObject, sum_: Real) -> None:
-    min_value = data.draw(strategies.floats(0, sum_))
-    size = data.draw(strategies.integers(MIN_PARTITION_SIZE,
-                                         min(floor(sum_ / min_value), 100)
-                                         if min_value
-                                         else 100))
+@given(st.data(), st.floats(0, 100))
+def test_to_partitions(data: st.DataObject, sum_: Real) -> None:
+    min_value = data.draw(st.floats(0, sum_))
+    size = data.draw(st.integers(MIN_PARTITION_SIZE,
+                                 min(floor(sum_ / min_value), 100)
+                                 if min_value else 100))
     strategy = requirements(sum_,
                             min_value=min_value,
                             size=size)

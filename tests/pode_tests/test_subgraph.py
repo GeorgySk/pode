@@ -1,13 +1,13 @@
 from hypothesis import given
-from hypothesis.strategies import integers
 
 from pode.pode import Graph
+from tests.strategies.geometry.base import nonnegative_integers
 from tests.strategies.graphs import graphs
 
 
 @given(graph=graphs,
-       index=integers(min_value=0),
-       other_index=integers(min_value=0))
+       index=nonnegative_integers,
+       other_index=nonnegative_integers)
 def test_subset(graph: Graph,
                 index: int,
                 other_index: int) -> None:
