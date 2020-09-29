@@ -25,8 +25,8 @@ from tests.strategies.geometry.base import (coordinates_strategies_factories,
                                             fractions,
                                             fractions_contours,
                                             multipoints,
-                                            polygons)
-from tests.strategies.sites import requirements
+                                            polygons,
+                                            requirements)
 
 T = TypeVar('T')
 

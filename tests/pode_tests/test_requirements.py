@@ -4,8 +4,8 @@ from numbers import Real
 from hypothesis import (given,
                         strategies as st)
 
-from tests.strategies.sites import (MIN_PARTITION_SIZE,
-                                    requirements)
+from tests.strategies.geometry.base import (MIN_PARTITION_SIZE,
+                                            requirements)
 
 
 @given(st.data(), st.floats(0, 100))
