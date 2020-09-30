@@ -3,14 +3,12 @@ from pathlib import Path
 from setuptools import (find_packages,
                         setup)
 
-import pode
-
 project_base_url = 'https://github.com/LostFan123/pode/'
 
-setup(name=pode.__name__,
+setup(name='pode',
       packages=find_packages(exclude=('tests', 'tests.*')),
-      version=pode.__version__,
-      description=pode.__doc__,
+      version='0.1.1',
+      description="""Polygon decomposition""",
       long_description=Path('README.md').read_text(encoding='utf-8'),
       long_description_content_type='text/markdown',
       author='Georgy Skorobogatov',
