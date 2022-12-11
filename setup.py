@@ -7,7 +7,7 @@ project_base_url = 'https://github.com/LostFan123/pode/'
 
 setup(name='pode',
       packages=find_packages(exclude=('tests', 'tests.*')),
-      version='0.2.0-alpha',
+      version='0.2.0',
       description="""Polygon decomposition""",
       long_description=Path('README.md').read_text(encoding='utf-8'),
       long_description_content_type='text/markdown',
