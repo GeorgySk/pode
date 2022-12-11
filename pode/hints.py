@@ -1,22 +1,19 @@
-from numbers import Real
 from typing import (List,
                     Protocol,
-                    Sequence,
-                    Tuple)
+                    Sequence)
 
-PointType = Tuple[Real, Real]
-ContourType = Sequence[PointType]
-SegmentType = Tuple[PointType, PointType]
-ConvexPartsType = List[Sequence[PointType]]
-PolygonType = Tuple[ContourType, Sequence[ContourType]]
+from gon.base import (Contour,
+                      Point,
+                      Polygon,
+                      Segment)
+from ground.base import Context
 
 
 class ConvexDivisorType(Protocol):
     def __call__(self,
-                 border: ContourType,
-                 holes: Sequence[ContourType] = (),
+                 polygon: Polygon,
                  *,
-                 extra_points: ContourType = (),
-                 extra_constraints: Sequence[SegmentType] = ()
-                 ) -> ConvexPartsType:
+                 extra_points: Sequence[Point] = (),
+                 extra_constraints: Sequence[Segment] = (),
+                 context: Context) -> List[Contour]:
         ...

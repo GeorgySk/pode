@@ -17,16 +17,17 @@ from typing import (DefaultDict,
                     Union)
 
 import networkx as nx
-from gon.angular import Orientation
-from gon.degenerate import (EMPTY,
-                            Maybe)
-from gon.discrete import Multipoint
-from gon.linear import (Contour,
-                        Multisegment,
-                        Segment)
-from gon.primitive import Point
-from gon.shaped import Polygon
-from sect.triangulation import constrained_delaunay_triangles
+from gon.base import (Contour,
+                      EMPTY,
+                      Multipoint,
+                      Multisegment,
+                      Orientation,
+                      Point,
+                      Polygon,
+                      Segment,
+                      Triangulation)
+from gon.hints import Maybe
+from ground.base import get_context
 
 from pode.hints import ConvexDivisorType
 from pode.utils import (cut,
@@ -160,9 +161,9 @@ class Graph(nx.DiGraph):
         vertices_in_interval = cut(polygon.border,
                                    splitter.start,
                                    splitter.end)
-        edges_in_interval = Multisegment(*map(Segment,
-                                              vertices_in_interval[:-1],
-                                              vertices_in_interval[1:]))
+        edges_in_interval = Multisegment([*map(Segment,
+                                               vertices_in_interval[:-1],
+                                               vertices_in_interval[1:])])
         return PolygonsSet({part
                             for edge, pred_poly in pred_poly_by_edges.items()
                             for part in pred_poly
@@ -275,7 +276,7 @@ class Graph(nx.DiGraph):
 
 def divide(polygon: Polygon,
            requirements: List[Requirement],
-           convex_divisor: ConvexDivisorType = constrained_delaunay_triangles
+           convex_divisor: ConvexDivisorType = Polygon.triangulate
            ) -> List[Polygon]:
     """
     Divides given polygon for the given list of `Requirement` objects
@@ -552,7 +553,7 @@ def split(*,
                             graph=graph)
             return a, b
         else:
-            ps = Multipoint(low_area_point, high_area_point).centroid
+            ps = Multipoint([low_area_point, high_area_point]).centroid
             triangle = Polygon(Contour([low_area_point, ps, pivot_point]))
             edge = (Segment(low_area_point, high_area_point)
                     if pivot_index == 0
@@ -571,7 +572,7 @@ def split(*,
                             graph=graph)
             return b, a, c
     else:
-        t = Multipoint(vertices[-1], vertices[0]).centroid
+        t = Multipoint([vertices[-1], vertices[0]]).centroid
         splitter = Segment(t, first_site_point)
         plr_1 = graph.plr(polygon, splitter)
         pll_1 = graph.pll(polygon, splitter)
@@ -640,20 +641,23 @@ def to_graph(polygon: Polygon,
     edges will keep `side` attributes with the touching segments.
     """
     graph = nx.Graph()
-    polygon_border = polygon.border.raw()
-    holes = list(map(Contour.raw, polygon.holes))
-    site_points = list(map(Point.raw, extra_points))
-    polygon_points = {*polygon_border, *chain.from_iterable(holes)}
+    polygon_border = polygon.border
+    holes = polygon.holes
+    site_points = extra_points
+    polygon_points = {*polygon_border.vertices,
+                      *chain.from_iterable(hole.vertices
+                                           for hole in holes)}
     extra_points = list(set(site_points) - polygon_points)
-    parts = convex_divisor(polygon_border,
-                           holes,
+    parts = convex_divisor(polygon,
                            extra_points=extra_points,
-                           extra_constraints=())
-    parts = [Polygon.from_raw((list(part), [])) for part in parts]
+                           context=get_context())
+    if isinstance(parts, Triangulation):
+        parts = parts.triangles()
+    parts = list(map(Polygon, parts))
     if len(parts) == 1:
         graph.add_nodes_from(parts)
     else:
-        if convex_divisor is constrained_delaunay_triangles:
+        if convex_divisor is Polygon.triangulate:
             parts_per_sides = defaultdict(set)
             for part in parts:
                 for side in edges(part.border):

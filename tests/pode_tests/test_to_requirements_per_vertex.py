@@ -2,7 +2,7 @@ from typing import (List,
                     Set,
                     Tuple)
 
-from gon.primitive import Point
+from gon.base import Point
 from hypothesis import given
 
 from pode.pode import (Requirement,

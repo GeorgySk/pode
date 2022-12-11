@@ -12,8 +12,9 @@ from tests.strategies.geometry.base import (MIN_PARTITION_SIZE,
 def test_to_partitions(data: st.DataObject, sum_: Real) -> None:
     min_value = data.draw(st.floats(0, sum_))
     size = data.draw(st.integers(MIN_PARTITION_SIZE,
-                                 min(floor(sum_ / min_value), 100)
-                                 if min_value else 100))
+                                         floor(min(sum_ / min_value, 100))
+                                         if min_value
+                                         else 100))
     strategy = requirements(sum_,
                             min_value=min_value,
                             size=size)

@@ -1,7 +1,7 @@
 from typing import (List,
                     Tuple)
 
-from gon.shaped import Polygon
+from gon.base import Polygon
 from hypothesis import given
 
 from pode.hints import ConvexDivisorType

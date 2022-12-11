@@ -4,8 +4,8 @@ from itertools import combinations
 from typing import (List,
                     Tuple)
 
-from gon.primitive import Point
-from gon.shaped import Polygon
+from gon.base import (Point,
+                      Polygon)
 from hypothesis import (assume,
                         given)
 

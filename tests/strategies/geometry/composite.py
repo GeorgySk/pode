@@ -8,11 +8,11 @@ from typing import (Callable,
                     Tuple,
                     TypeVar)
 
-from gon.discrete import Multipoint
-from gon.linear import (Contour,
-                        Segment)
-from gon.primitive import Point
-from gon.shaped import Polygon
+from gon.base import (Contour,
+                      Multipoint,
+                      Point,
+                      Polygon,
+                      Segment)
 from hypothesis import strategies as st
 from hypothesis_geometry import planar
 
@@ -56,7 +56,7 @@ def _multipoints_and_segments(draw: Callable[[st.SearchStrategy[T]], T]
                               ) -> Tuple[Multipoint, Segment]:
     contour: Contour = draw(fractions_contours)
     segments = list(edges(contour))
-    multipoint = Multipoint(*contour.vertices)
+    multipoint = Multipoint(contour.vertices)
     edge = draw(st.sampled_from(segments))
     return multipoint, edge
 
@@ -125,8 +125,7 @@ def _bounding_box(points: Iterable[Point]) -> Tuple[Real, Real, Real, Real]:
 @st.composite
 def _convex_contour_points(draw: Callable[[st.SearchStrategy[T]], T]
                            ) -> List[Point]:
-    contour: Contour = draw(st.builds(Contour.from_raw,
-                                      planar.convex_contours(fractions)))
+    contour: Contour = draw(planar.convex_contours(fractions))
     fractions_lists = draw(st.lists(
         st.lists(st.fractions(min_value=0,
                               max_value=1)
