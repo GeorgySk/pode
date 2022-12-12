@@ -1,6 +1,6 @@
 from typing import List
 
-from gon.primitive import Point
+from gon.base import Point
 from hypothesis import given
 
 from pode.utils import order_convex_contour_points

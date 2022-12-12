@@ -1,8 +1,8 @@
 from typing import Tuple
 
-from gon.linear import (Contour,
-                        Segment)
-from gon.primitive import Point
+from gon.base import (Contour,
+                      Point,
+                      Segment)
 from hypothesis import given
 
 from pode.utils import cut

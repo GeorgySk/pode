@@ -9,21 +9,18 @@ from typing import (Iterator,
                     TypeVar,
                     Union)
 
-from gon.angular import Orientation
-from gon.compound import Shaped
-from gon.degenerate import (EMPTY,
-                            Empty)
-from gon.geometry import Geometry
-from gon.linear import (Contour,
-                        Segment)
-from gon.primitive import Point
-from gon.shaped import Polygon
-from sect.triangulation import constrained_delaunay_triangles
-
-from pode.hints import (ContourType,
-                        ConvexPartsType,
-                        PointType,
-                        SegmentType)
+from gon.base import (Contour,
+                      EMPTY,
+                      Empty,
+                      Geometry,
+                      Orientation,
+                      Point,
+                      Polygon,
+                      Segment,
+                      Shaped,
+                      Triangulation)
+from ground.base import (Context,
+                         get_context)
 
 GeometryType = TypeVar('GeometryType', bound=Geometry)
 T = TypeVar('T')
@@ -178,18 +175,18 @@ def orient(polygon: Polygon) -> Polygon:
 
 
 def joined_constrained_delaunay_triangles(
-        border: ContourType,
-        holes: Sequence[ContourType] = (),
+        polygon: Polygon,
         *,
-        extra_points: Sequence[PointType] = (),
-        extra_constraints: Sequence[SegmentType] = ()) -> ConvexPartsType:
+        extra_points: Sequence[Point] = (),
+        extra_constraints: Sequence[Segment] = (),
+        context: Context) -> List[Contour]:
     """Joins polygons to form convex parts of greater size"""
-    triangles = constrained_delaunay_triangles(
-        border, holes,
+    triangles = Triangulation.constrained_delaunay(
+        polygon,
         extra_points=extra_points,
-        extra_constraints=extra_constraints)
-    polygons = [Polygon.from_raw((list(triangle), []))
-                for triangle in triangles]
+        extra_constraints=extra_constraints,
+        context=context).triangles()
+    polygons = list(map(Polygon, triangles))
     initial_polygon = polygons.pop()
     result = []
     while True:
@@ -201,8 +198,8 @@ def joined_constrained_delaunay_triangles(
                                 if edge in polygon_sides), None)
             if common_side is None:
                 continue
-            has_point_on_edge = any(Point.from_raw(raw_point) in common_side
-                                    for raw_point in extra_points)
+            has_point_on_edge = any(point in common_side
+                                    for point in extra_points)
             if has_point_on_edge:
                 continue
             union_ = unite(resulting_polygon, polygon)
@@ -212,7 +209,7 @@ def joined_constrained_delaunay_triangles(
         if resulting_polygon is not initial_polygon:
             initial_polygon = resulting_polygon
             continue
-        result.append(resulting_polygon.border.raw())
+        result.append(resulting_polygon.border)
         if not polygons:
             return result
         initial_polygon = polygons.pop()

@@ -1,7 +1,7 @@
 from typing import Tuple
 
-from gon.discrete import Multipoint
-from gon.linear import Segment
+from gon.base import (Multipoint,
+                      Segment)
 from hypothesis import given
 
 from pode.pode import order_by_edge

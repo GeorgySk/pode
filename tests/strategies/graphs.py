@@ -2,8 +2,8 @@ from typing import (List,
                     Tuple)
 
 import networkx as nx
-from gon.primitive import Point
-from gon.shaped import Polygon
+from gon.base import (Point,
+                      Polygon)
 from hypothesis import strategies as st
 
 from pode.hints import ConvexDivisorType

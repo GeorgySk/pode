@@ -1,8 +1,8 @@
 from fractions import Fraction
 
-from gon.linear import (Contour,
-                        Segment)
-from gon.shaped import Polygon
+from gon.base import (Contour,
+                      Polygon,
+                      Segment)
 from hypothesis import (assume,
                         given,
                         strategies as st)
