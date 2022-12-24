@@ -1,5 +1,5 @@
 """Polygon decomposition"""
-__version__ = '0.3.0-alpha'
+__version__ = '0.3.0'
 
 from .pode import (divide,
                    Contour,
