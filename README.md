@@ -54,9 +54,9 @@ git clone https://github.com/LostFan123/pode.git
 cd pode
 ```
 
-Install:
+Install dependencies:
   ```bash
-  python setup.py install
+  poetry install
   ```
 
 Usage
@@ -138,7 +138,7 @@ as separate pull request.
 
 Plain:
   ```bash
-  python setup.py test
+  pytest
   ```
 
 Inside `Docker` container:
