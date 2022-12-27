@@ -276,7 +276,8 @@ class Graph(nx.DiGraph):
 
 def divide(polygon: Polygon,
            requirements: List[Requirement],
-           convex_divisor: ConvexDivisorType = Polygon.triangulate
+           convex_divisor: ConvexDivisorType
+           = Triangulation.constrained_delaunay
            ) -> List[Polygon]:
     """
     Divides given polygon for the given list of `Requirement` objects
@@ -657,7 +658,7 @@ def to_graph(polygon: Polygon,
     if len(parts) == 1:
         graph.add_nodes_from(parts)
     else:
-        if convex_divisor is Polygon.triangulate:
+        if convex_divisor is Triangulation.constrained_delaunay:
             parts_per_sides = defaultdict(set)
             for part in parts:
                 for side in edges(part.border):
