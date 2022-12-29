@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pode"
-version = "0.3.1"
+version = "0.4.0-alpha"
 description = "Implementation of an algorithm for a polygon decomposition by Hert, S. and Lumelsky, V., 1998"
 authors = ["GeorgySk <skorobogatovgeorgy@gmail.com>"]
 readme = "README.md"
