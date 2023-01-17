@@ -67,8 +67,10 @@ Usage
 >>> polygon = Polygon(contour)
 >>> requirements = [Requirement(0.5), Requirement(0.5, point=Point(1, 1))]
 >>> parts = divide(polygon, requirements)
-assert parts[0].area == parts[1].area < polygon.area
-assert Point(1, 1) in parts[1]
+>>> parts[0].area == parts[1].area < polygon.area
+True
+>>> Point(1, 1) in parts[1]
+True
 ```
 Currently, the algorithm uses constrained Delaunay triangulation to form convex 
 parts which are used internally for a convex-polygon partition.
