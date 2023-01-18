@@ -71,6 +71,7 @@ Usage
 True
 >>> Point(1, 1) in parts[1]
 True
+
 ```
 Currently, the algorithm uses constrained Delaunay triangulation to form convex 
 parts which are used internally for a convex-polygon partition.
