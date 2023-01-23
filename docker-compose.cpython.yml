@@ -8,7 +8,7 @@ services:
         - PYTHON_IMAGE=${CPYTHON_IMAGE_NAME}
         - PYTHON_IMAGE_VERSION=${CPYTHON_IMAGE_VERSION}
         - POETRY_VERSION=${POETRY_VERSION}
-    image: lostfan123/pode-cpython:0.4.0
+    image: lostfan123/pode-cpython:0.4.1-alpha
     volumes:
       - ./pode/:/opt/pode/pode/
       - ./tests/:/opt/pode/tests/
