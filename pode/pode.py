@@ -25,7 +25,8 @@ from gon.base import (Contour,
                       Point,
                       Polygon,
                       Segment,
-                      Triangulation)
+                      Triangulation,
+                      Vector)
 from gon.hints import Maybe
 from ground.base import get_context
 
@@ -555,6 +556,34 @@ def split(*,
             return a, b
         else:
             ps = Multipoint([low_area_point, high_area_point]).centroid
+            if (Vector(low_area_point, pivot_point).orientation_of(ps)
+                    is Orientation.COLLINEAR):
+                index = pivot_index
+                while True:
+                    index -= 1
+                    temp_point = vertices[index]
+                    if Vector(low_area_point, pivot_point).orientation_of(
+                            temp_point) is not Orientation.COLLINEAR:
+                        new_splitter_tail = Multipoint(
+                            [temp_point, vertices[index + 1]]).centroid
+                        break
+                new_splitter_head = edge.centroid
+                splitter = Segment(new_splitter_tail, new_splitter_head)
+                plr_1 = graph.plr(polygon, splitter)
+                pll_1 = graph.pll(polygon, splitter)
+                pred_by_line = graph.pred_poly_by_line(polygon, edge)
+                a = graph.subgraph(pred_by_line)
+                b = to_subgraph(predecessors=plr_1.predecessors - pred_by_line,
+                                old_root=polygon,
+                                new_root=plr_1.root,
+                                sites=right_sites,
+                                graph=graph)
+                c = to_subgraph(predecessors=pll_1.predecessors - pred_by_line,
+                                old_root=polygon,
+                                new_root=pll_1.root,
+                                sites=sites - right_sites,
+                                graph=graph)
+                return b, a, c
             triangle = Polygon(Contour([low_area_point, ps, pivot_point]))
             edge = (Segment(low_area_point, high_area_point)
                     if pivot_index == 0
