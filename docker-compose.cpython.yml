@@ -14,7 +14,7 @@ services:
       - ./tests/:/opt/pode/tests/
       - ./README.md:/opt/pode/README.md
       - ./pyproject.toml:/opt/pode/pyproject.toml
-      - ./pytest.ini:/opt/pode/pytest.ini
       - ./.bumpversion.toml:/opt/pode/.bumpversion.toml
       - ./docker-compose.cpython.yml:/opt/pode/docker-compose.cpython.yml
-    entrypoint: pytest
+    stdin_open: true
+    tty: true

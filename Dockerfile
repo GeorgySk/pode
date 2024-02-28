@@ -15,6 +15,5 @@ RUN poetry config virtualenvs.create false
 RUN poetry install
 
 COPY README.md .
-COPY pytest.ini .
 COPY pode/ pode/
 COPY tests/ tests/
