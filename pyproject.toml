@@ -16,7 +16,7 @@ sect = "^6.1.0"
 bump-my-version = "^0.18.3"
 pytest = "^7.2.0"
 pytest-cov = "^4.0.0"
-hypothesis = "^6.98.18"
+hypothesis = "6.99.1"
 hypothesis-geometry = "^7.3.0"
 
 [build-system]
