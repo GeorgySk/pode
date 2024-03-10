@@ -12,10 +12,10 @@ from hypothesis import (assume,
 from pode.hints import ConvexDivisorType
 from pode.pode import to_graph
 from tests.strategies.geometry.base import convex_divisors
-from tests.strategies.geometry.composite import polygons_and_points
+from tests.strategies.geometry.composite import fraction_polygons_and_points
 
 
-@given(polygon_and_points=polygons_and_points,
+@given(polygon_and_points=fraction_polygons_and_points,
        convex_divisor=convex_divisors)
 def test_polygon_reconstruction(
         polygon_and_points: Tuple[Polygon, List[Point]],
@@ -26,7 +26,7 @@ def test_polygon_reconstruction(
     assert polygon == union
 
 
-@given(polygon_and_points=polygons_and_points,
+@given(polygon_and_points=fraction_polygons_and_points,
        convex_divisor=convex_divisors)
 def test_parts_intersections(
         polygon_and_points: Tuple[Polygon, List[Point]],
@@ -37,7 +37,7 @@ def test_parts_intersections(
                for part, other in combinations(list(graph), 2))
 
 
-@given(polygon_and_points=polygons_and_points,
+@given(polygon_and_points=fraction_polygons_and_points,
        convex_divisor=convex_divisors)
 def test_nodes_connections(
         polygon_and_points: Tuple[Polygon, List[Point]],
