@@ -1,0 +1,15 @@
+version: '3'
+
+services:
+  pode:
+    build:
+      context: .
+      args:
+        - PYTHON_IMAGE_VERSION=${PYTHON_IMAGE_VERSION}
+        - POETRY_VERSION=${POETRY_VERSION}
+        - DEV_IMAGE=${DEV_IMAGE}
+    image: georgysk/pode:0.4.4-alpha
+    volumes:
+      - .:/opt/pode
+    stdin_open: true
+    tty: true

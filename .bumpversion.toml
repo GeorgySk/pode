@@ -5,18 +5,8 @@ serialize = [
     "{major}.{minor}.{patch}-{release}",
     "{major}.{minor}.{patch}"
 ]
-search = "{current_version}"
-replace = "{new_version}"
-regex = false
-ignore_missing_version = false
-tag = true
-sign_tags = false
-tag_name = "v{new_version}"
-tag_message = "Bump version: {current_version} → {new_version}"
-allow_dirty = false
-commit = true
-message = "Bump version: {current_version} → {new_version}"
-commit_args = ""
+commit = false
+tag = false
 
 [tool.bumpversion.parts.release]
 optional_value = "beta"
@@ -26,7 +16,7 @@ values = [
 ]
 
 [[tool.bumpversion.files]]
-filename = "docker-compose.cpython.yml"
+filename = "compose.yaml"
 
 [[tool.bumpversion.files]]
 filename = "pode/__init__.py"
