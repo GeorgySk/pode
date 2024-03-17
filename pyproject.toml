@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "pode"
-version = "0.4.3"
+version = "0.4.4"
 description = "Implementation of an algorithm for a polygon decomposition by Hert, S. and Lumelsky, V., 1998"
-authors = ["GeorgySk <skorobogatovgeorgy@gmail.com>"]
+authors = ["GeorgySk <skorobogatovgeorgy+github@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
@@ -20,7 +20,7 @@ hypothesis = "6.99.1"
 hypothesis-geometry = "^7.3.0"
 
 [build-system]
-requires = ["poetry-core", "poetry>=1.0"]
+requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.coverage.run]
