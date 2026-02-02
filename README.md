@@ -2,8 +2,10 @@ pode
 ===========
 
 
-[![](https://codecov.io/gh/LostFan123/pode/branch/master/graph/badge.svg)](https://codecov.io/gh/LostFan123/pode "Codecov")
-[![](https://img.shields.io/github/license/LostFan123/pode.svg)](https://github.com/LostFan123/pode/blob/master/LICENSE "License")
+[![](https://github.com/GeorgySk/pode/workflows/CI/badge.svg)](https://github.com/GeorgySk/pode/actions/workflows/ci.yml "Github Actions")
+[![](https://codecov.io/gh/GeorgySk/gon/branch/master/graph/badge.svg)](https://codecov.io/gh/GeorgySk/pode "Codecov")
+[![](https://readthedocs.org/projects/pode/badge/?version=latest)](https://pode.readthedocs.io/en/latest "Documentation")
+[![](https://img.shields.io/github/license/GeorgySk/pode.svg)](https://github.com/GeorgySk/pode/blob/master/LICENSE "License")
 [![](https://badge.fury.io/py/pode.svg)](https://badge.fury.io/py/pode "PyPI")
 
 Summary
