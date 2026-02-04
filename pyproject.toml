@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "pode"
-version = "0.4.5-alpha"
+version = "0.4.5"
 description = "Implementation of an algorithm for a polygon decomposition by Hert, S. and Lumelsky, V., 1998"
 authors = [
     { name = "Georgy Skorobogatov", email = "skorobogatovgeorgy+github@gmail.com" },
