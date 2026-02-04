@@ -1,27 +1,31 @@
-[tool.poetry]
-name = "pode"
-version = "0.4.4"
-description = "Implementation of an algorithm for a polygon decomposition by Hert, S. and Lumelsky, V., 1998"
-authors = ["GeorgySk <skorobogatovgeorgy+github@gmail.com>"]
-readme = "README.md"
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
 
-[tool.poetry.dependencies]
-python = "^3.8"
-gon = "^5.0.0"
-ground = "^8.1.0"
-networkx = "^2.8.8"
-sect = "^6.1.0"
+[project]
+name = "pode"
+version = "0.4.5"
+description = "Implementation of an algorithm for a polygon decomposition by Hert, S. and Lumelsky, V., 1998"
+authors = [
+    { name = "Georgy Skorobogatov", email = "skorobogatovgeorgy+github@gmail.com" },
+]
+readme = "README.md"
+license-files = ["LICENSE"]
+requires-python = "^3.10"
+dependencies = [
+    "gon (>=5.0.0,<6.0.0)",
+    "ground (>=8.1.0,<9.0.0)",
+    "networkx (>=2.8.8,<3.0.0)",
+    "sect (>=6.1.0,<7.0.0)"
+]
 
 [tool.poetry.group.dev.dependencies]
 bump-my-version = "^0.18.3"
 pytest = "^7.2.0"
 pytest-cov = "^4.0.0"
+# fixed for easier way to reproduce across various machines
 hypothesis = "6.99.1"
 hypothesis-geometry = "^7.3.0"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
 
 [tool.coverage.run]
 source = ["pode"]

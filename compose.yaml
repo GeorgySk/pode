@@ -1,5 +1,3 @@
-version: '3'
-
 services:
   pode:
     build:
@@ -8,7 +6,7 @@ services:
         - PYTHON_IMAGE_VERSION=${PYTHON_IMAGE_VERSION}
         - POETRY_VERSION=${POETRY_VERSION}
         - DEV_IMAGE=${DEV_IMAGE}
-    image: georgysk/pode:0.4.4
+    image: georgysk/pode:0.4.5
     volumes:
       - .:/opt/pode
     stdin_open: true
