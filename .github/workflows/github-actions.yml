@@ -33,6 +33,9 @@ jobs:
             python_architecture: 'x86'
           },
         ]
+        exclude:
+          - python-version: 3.10
+            os: macos-latest
     steps:
       - name: 'Checkout'
         uses: actions/checkout@v3
