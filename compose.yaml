@@ -5,8 +5,7 @@ services:
       args:
         - PYTHON_IMAGE_VERSION=${PYTHON_IMAGE_VERSION}
         - POETRY_VERSION=${POETRY_VERSION}
-        - DEV_IMAGE=${DEV_IMAGE}
-    image: georgysk/pode:0.4.5
+        - IMAGE_TYPE=${IMAGE_TYPE}
     image: georgysk/pode:0.4.6-alpha
     volumes:
       - .:/opt/pode
