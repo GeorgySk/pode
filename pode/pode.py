@@ -103,6 +103,7 @@ class Graph(nx.DiGraph):
     def next_neighbor(self, polygon: Polygon) -> Optional[Polygon]:
         """
         Most immediate successor which is a neighbor of a given node
+
         :param polygon: node of the graph
         :return: next neighbor node or `None` if not found
         """
@@ -114,6 +115,7 @@ class Graph(nx.DiGraph):
         PredPoly is defined in the paper as the current polygon plus
         all its ancestors. In the paper ancestors are called
         "predecessors".
+
         :param polygon: node of the graph
         :return: a set of polygons that are parts of PredPoly
         """
@@ -282,12 +284,13 @@ def divide(polygon: Polygon,
            ) -> List[Polygon]:
     """
     Divides given polygon for the given list of `Requirement` objects
+
     :param polygon: input polygon
     :param requirements: area requirements with optional points
     :param convex_divisor: function to split input polygon to convex
-    parts
+                           parts
     :return: a list of parts of the polygon in the order corresponding
-    to `requirements`
+             to `requirements`
     """
     validate_requirements(requirements, polygon)
     if len(requirements) == 1:
@@ -659,16 +662,17 @@ def to_graph(polygon: Polygon,
              *,
              convex_divisor: ConvexDivisorType) -> nx.Graph:
     """
-    Converts polygon to a region-adjacency graph by dividing it to 
-    parts using `convex_divisor` function. Resulting parts become 
-    nodes connected when they touch each other.
+    Converts polygon to a region-adjacency graph by dividing it to
+    parts using `convex_divisor` function. Resulting parts become nodes
+    connected when they touch each other.
+
     :param polygon: input polygon that will be split
-    :param extra_points: list of points which will be used in
-    splitting the polygon to convex parts
+    :param extra_points: list of points which will be used in splitting
+                         the polygon to convex parts
     :param convex_divisor: function to split the polygon into convex
-    parts
-    :return: graph with parts of the polygon as nodes;
-    edges will keep `side` attributes with the touching segments.
+                           parts
+    :return: graph with parts of the polygon as nodes; edges will keep
+             `side` attributes with the touching segments.
     """
     graph = nx.Graph()
     polygon_border = polygon.border
@@ -709,6 +713,7 @@ def order_by_sites(vertices: List[Point],
     """
     Orders vertices of the convex polygon and the sites in a
     counterclockwise manner so that the last vertex would be a site.
+
     :param vertices: convex polygon's vertices and sites
     :param site_location: site that will be the last vertex
     :return: ordered union of polygon vertices and sites
@@ -725,8 +730,9 @@ def order_by_edge(vertices: List[Point],
     Orders vertices of the convex polygon and the sites in a
     counterclockwise manner so that the last edge would be the edge to
     the next neighbor.
+
     :param vertices: vertices of the convex polygon and the sites
-    located on the boundary of the polygon
+                     located on the boundary of the polygon
     :param edge: edge to the next neighbor
     :return: ordered union of polygon vertices and sites
     """
