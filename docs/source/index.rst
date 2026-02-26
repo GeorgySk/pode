@@ -10,15 +10,7 @@ pode
 
 .. toctree::
    :maxdepth: 2
-   :caption: Modules:
 
    pode
    utils
    hints
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
