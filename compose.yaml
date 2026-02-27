@@ -6,7 +6,7 @@ services:
         - PYTHON_IMAGE_VERSION=${PYTHON_IMAGE_VERSION}
         - POETRY_VERSION=${POETRY_VERSION}
         - IMAGE_TYPE=${IMAGE_TYPE}
-    image: georgysk/pode:0.4.6-alpha
+    image: georgysk/pode:0.4.6
     volumes:
       - .:/opt/pode
     stdin_open: true
