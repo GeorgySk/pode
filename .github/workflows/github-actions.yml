@@ -43,7 +43,7 @@ jobs:
       - name: 'Turn off virtual environment of Poetry'
         run: poetry config virtualenvs.create false
       - name: 'Install dependencies'
-        run: poetry install --with dev
+        run: poetry install --with dev,docs
       - name: 'Run doctests'
         run: >
           coverage run -m doctest README.md
