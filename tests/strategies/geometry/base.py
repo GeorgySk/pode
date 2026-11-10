@@ -76,7 +76,8 @@ def requirements(sum_: Real,
         if math.isfinite(max_size_approximation):
             max_size = floor(max_size_approximation)
             if max_size < size:
-                raise ValueError(f"`size` should not be greater than {max_size}.")
+                raise ValueError(
+                    f"`size` should not be greater than {max_size}.")
 
     def to_proportions(numbers: list[Real]) -> list[Real]:
         return [2 * abs(number) / (1 + number * number) for number in numbers]
