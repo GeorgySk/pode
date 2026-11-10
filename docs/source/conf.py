@@ -1,16 +1,16 @@
 # Configuration file for the Sphinx documentation builder.
 
-import os
 import sys
 import tomllib
 from datetime import date
 from pathlib import Path
 
-# tells autodoc where to find the code
-sys.path.insert(0, os.path.abspath("../.."))
+project_root = Path(__file__).resolve().parents[2]
 
-pyproject_path = Path(__file__).resolve().parents[2] / "pyproject.toml"
-with pyproject_path.open("rb") as file:
+# tells autodoc where to find the code
+sys.path.insert(0, str(project_root))
+
+with (project_root / "pyproject.toml").open("rb") as file:
     project_data = tomllib.load(file)["project"]
 
 # -- Project information

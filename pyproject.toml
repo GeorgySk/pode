@@ -50,4 +50,82 @@ strict = true
 line-length = 79
 
 [tool.ruff.lint]
-select = ["E", "W", "F", "B", "I"]
+select = ["ALL"]
+ignore = [
+    # The main argument for mandatory trailing commas is that appending an
+    # item then changes only one line in a diff. We don't find that a good
+    # enough reason to require them in our code.
+    "COM812",
+    # `zip()` without `strict=` already behaves as `strict=False`, which
+    # anyone familiar with Python knows, so spelling out the default only
+    # adds noise. We pass `strict=True` where lengths must match.
+    "B905",
+    # The license only requires the copyright notice to accompany copies
+    # of the work, which the LICENSE file already does, so per-file
+    # copyright headers add nothing.
+    "CPY001",
+    # Moving third-party imports used only in annotations under
+    # `if TYPE_CHECKING:` saves their import cost only if nothing else
+    # imports them at runtime. A package's runtime dependencies are usually
+    # imported by the package itself anyway, so nothing is saved. Meanwhile
+    # the annotations can no longer be resolved at runtime (for example, by
+    # `typing.get_type_hints`), and every module gets an extra block.
+    "TC002",
+    # Whether a docstring summary should be imperative ("Return ...") or
+    # descriptive ("Returns ...") is purely a matter of opinion: PEP 257
+    # prefers the former, the Google style guide the latter, and neither
+    # style has any real advantage over the other. We write descriptive
+    # summaries, which D401 would flag.
+    "D401",
+    # D212 and D213 are mutually exclusive: the former wants a multi-line
+    # docstring summary on the same line as the opening quotes, the latter
+    # on the line after them. PEP 257 allows either, and the choice is
+    # purely a matter of opinion with no real advantage either way. We put
+    # the opening quotes on their own line, so we ignore D212 and keep D213.
+    "D212",
+    # D203 and D211 are mutually exclusive: the former wants a blank line
+    # between a class statement and its docstring, the latter forbids one.
+    # Current PEP 257 doesn't ask for such blank lines, so we ignore D203
+    # and keep D211.
+    "D203",
+    # EM101 and EM102 want exception messages assigned to a variable before
+    # `raise`, only so that a traceback doesn't show the message twice (once
+    # in the `raise` source line and once after the exception name). That is
+    # a purely cosmetic concern: the extra line makes the code noisier, and
+    # having the message in the `raise` line makes it easy to find by grep.
+    "EM101",
+    "EM102",
+    # RUF001, RUF002 and RUF003 flag characters that look like ASCII ones,
+    # such as the Turkish dotless `ı`, Cyrillic letters or the en dash `–`.
+    # Such characters are legitimate in any non-English text, for example
+    # in an author's name, a docstring or a comment.
+    "RUF001",
+    "RUF002",
+    "RUF003",
+    # TRY003 wants long exception messages moved into custom exception
+    # classes. That only pays off when callers need to catch a specific
+    # error or the same message is raised from many places. Otherwise it
+    # adds a class per message and goes against the common practice of
+    # raising built-in exceptions whenever their meaning fits.
+    "TRY003",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+    "D100", "D103", "D104",  # tests don't need docstrings
+    "S101",  # it's expected to have `assert` in tests
+    "E731",  # lambdas are handy for defining simple test keys
+]
+# Text from the prompt answers is rendered into this file's docstring and
+# strings. A long description can't fit the docstring's one-line summary
+# (D205), and the answers may hold backslashes (D301), start with "This"
+# (D404) or contain invisible characters (PLE2502, PLE2515).
+"pode/__init__.py" = [
+    "D205", "D301", "D404", "PLE2502", "PLE2515",
+]
+"docs/**" = [
+    "D100",  # Sphinx's `conf.py` is a config file, not a documented module
+    "DTZ011",  # local date is fine for the copyright year
+    "A001",  # Sphinx requires the config variable to be named `copyright`
+    "INP001",  # Sphinx executes `conf.py` by path, it's never imported
+]
