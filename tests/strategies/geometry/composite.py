@@ -1,9 +1,9 @@
+from collections.abc import (Callable, 
+                             Iterable)
 from fractions import Fraction
 from itertools import zip_longest
 from numbers import Real
-from typing import (Callable,
-                    Iterable,
-                    TypeVar)
+from typing import TypeVar
 
 from gon.base import (Contour,
                       Multipoint,

@@ -1,10 +1,10 @@
 import operator
+from collections.abc import (Iterator,
+                             Sequence)
 from fractions import Fraction
 from functools import (reduce,
                        singledispatch)
-from typing import (Iterator,
-                    Sequence,
-                    TypeVar,
+from typing import (TypeVar,
                     Union)
 
 from gon.base import (Contour,

@@ -1,13 +1,13 @@
 from collections import defaultdict
+from collections.abc import (Iterable,
+                             Iterator)
 from dataclasses import dataclass
 from fractions import Fraction
 from functools import cached_property
 from itertools import (chain,
                        combinations)
 from numbers import Real
-from typing import (Iterable,
-                    Iterator,
-                    NamedTuple,
+from typing import (NamedTuple,
                     Optional,
                     Union)
 
