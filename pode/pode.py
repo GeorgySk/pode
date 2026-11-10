@@ -43,7 +43,7 @@ from pode.utils import (cut,
 
 
 class Requirement(NamedTuple):
-    """Area requirement with an optional point (site)"""
+    """Area requirement with an optional point (site)."""
     area: Real
     point: Optional[Point] = None
 
@@ -102,7 +102,7 @@ class Graph(nx.DiGraph):
 
     def next_neighbor(self, polygon: Polygon) -> Optional[Polygon]:
         """
-        Most immediate successor which is a neighbor of a given node
+        Most immediate successor which is a neighbor of a given node.
 
         :param polygon: node of the graph
         :return: next neighbor node or `None` if not found
@@ -142,7 +142,7 @@ class Graph(nx.DiGraph):
                                polygon: Polygon) -> Dict[Segment, Polygon]:
         """
         Mapping of the most immediate ancestors by the edges they
-        touch the given polygon
+        touch the given polygon.
         """
         return {self[predecessor][polygon]['side']: predecessor
                 for predecessor in self.predecessors(polygon)}
@@ -151,7 +151,7 @@ class Graph(nx.DiGraph):
                             polygon: Polygon) -> Dict[Segment, PolygonsSet]:
         """
         Mapping of edges to ancestors that can be reached from the
-        given polygon
+        given polygon.
         """
         predecessors_by_edges = self._predecessors_by_edges(polygon)
         return {edge: self.pred_polys(predecessor)
@@ -178,7 +178,7 @@ class Graph(nx.DiGraph):
         """
         Portion of the current polygon to the right of the splitter
         plus all immediate ancestors accessible through the polygon
-        edges that lie on the right of the splitter
+        edges that lie on the right of the splitter.
         """
         vertices_in_interval = cut(polygon.border,
                                    splitter.start,
@@ -283,7 +283,7 @@ def divide(polygon: Polygon,
            = Triangulation.constrained_delaunay
            ) -> List[Polygon]:
     """
-    Divides given polygon for the given list of `Requirement` objects
+    Divides given polygon for the given list of `Requirement` objects.
 
     :param polygon: input polygon
     :param requirements: area requirements with optional points
@@ -461,7 +461,7 @@ def split(*,
           graph: Graph
           ) -> Union[Tuple[nx.DiGraph, nx.DiGraph],
                      Tuple[nx.DiGraph, nx.DiGraph, nx.DiGraph]]:
-    """Splits a PredPoly to 2 or 3 parts for further division"""
+    """Splits a PredPoly to 2 or 3 parts for further division."""
     if polygon.border.orientation is not Orientation.COUNTERCLOCKWISE:
         raise ValueError("Polygon division is implemented only for polygons "
                          "oriented counter-clockwise")

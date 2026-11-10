@@ -118,7 +118,7 @@ def splitter_point(requirement: float,
                    pivot: Point,
                    low_area_point: Point,
                    high_area_point: Point) -> Point:
-    """Alternative to bisection search since we always have triangles"""
+    """Alternative to bisection search since we always have triangles."""
     if requirement <= 0:
         raise ValueError("Can't have a zero or negative requirement")
     p = pivot
@@ -170,7 +170,7 @@ def splitter_point(requirement: float,
 
 
 def orient(polygon: Polygon) -> Polygon:
-    """To counterclockwise. No holes"""
+    """To counterclockwise. No holes."""
     return Polygon(polygon.border.to_counterclockwise())
 
 
@@ -180,7 +180,7 @@ def joined_constrained_delaunay_triangles(
         extra_points: Sequence[Point] = (),
         extra_constraints: Sequence[Segment] = (),
         context: Context) -> List[Contour]:
-    """Joins polygons to form convex parts of greater size"""
+    """Joins polygons to form convex parts of greater size."""
     triangles = Triangulation.constrained_delaunay(
         polygon,
         extra_points=extra_points,

@@ -2,7 +2,7 @@ from typing import List
 
 
 def cyclic_equivalence(u: List, v: List) -> bool:
-    """Taken from https://stackoverflow.com/a/31001317/7851470"""
+    """Taken from https://stackoverflow.com/a/31001317/7851470."""
     n, i, j = len(u), 0, 0
     if n != len(v):
         return False
