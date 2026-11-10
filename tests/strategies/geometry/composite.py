@@ -1,4 +1,4 @@
-from collections.abc import (Callable, 
+from collections.abc import (Callable,
                              Iterable)
 from fractions import Fraction
 from itertools import zip_longest
