@@ -60,7 +60,7 @@ fractions_polygons = coordinates_to_polygons(fractions)
 multipoints = coordinates_strategies.flatmap(coordinates_to_multipoints)
 
 
-def requirements(sum_: Real,
+def requirements(sum_: Real,  # noqa: C901
                  *,
                  min_value: Real = 0,
                  size: int = MIN_PARTITION_SIZE,

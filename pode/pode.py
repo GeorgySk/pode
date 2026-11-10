@@ -216,7 +216,7 @@ class Graph(nx.DiGraph):
                 new_graph.nodes[node].update(graph.nodes[node])
         return new_graph
 
-    def prepend_three(self,
+    def prepend_three(self,  # noqa: C901
                       parts: tuple[nx.DiGraph, nx.DiGraph, nx.DiGraph],
                       target: Optional[Polygon]) -> "Graph":
         new_graph = Graph()
@@ -272,7 +272,7 @@ class Graph(nx.DiGraph):
         return new_graph
 
 
-def divide(polygon: Polygon,
+def divide(polygon: Polygon,  # noqa: C901
            requirements: list[Requirement],
            convex_divisor: ConvexDivisorType
            = Triangulation.constrained_delaunay
@@ -449,7 +449,7 @@ def assign_requirements(*,
     return frozenset([current_requirement]), leftover_requirements
 
 
-def split(*,
+def split(*,  # noqa: C901
           polygon: Polygon,
           vertices: list[Point],
           sites: frozenset[Requirement],
