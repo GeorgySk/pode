@@ -1,0 +1,16 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: v0.28.1
+_src_path: gh:GeorgySk/copier-pypackage
+ci_provider: github
+email: skorobogatovgeorgy+github@gmail.com
+full_name: Georgy Skorobogatov
+github_username: GeorgySk
+open_source_license: MIT license
+project_name: pode
+project_short_description: Implementation the polygon decomposition algorithm by Hert,
+    S. and Lumelsky, V., 1998
+project_slug: pode
+python_version: '3.11'
+use_devcontainer: true
+use_docker_compose: true
+version: 0.4.6
