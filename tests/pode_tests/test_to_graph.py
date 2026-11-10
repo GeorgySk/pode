@@ -1,8 +1,6 @@
 import operator
 from functools import reduce
 from itertools import combinations
-from typing import (List,
-                    Tuple)
 
 from gon.base import (Point,
                       Polygon)
@@ -18,7 +16,7 @@ from tests.strategies.geometry.composite import fraction_polygons_and_points
 @given(polygon_and_points=fraction_polygons_and_points,
        convex_divisor=convex_divisors)
 def test_polygon_reconstruction(
-        polygon_and_points: Tuple[Polygon, List[Point]],
+        polygon_and_points: tuple[Polygon, list[Point]],
         convex_divisor: ConvexDivisorType) -> None:
     polygon, points = polygon_and_points
     graph = to_graph(polygon, points, convex_divisor=convex_divisor)
@@ -29,7 +27,7 @@ def test_polygon_reconstruction(
 @given(polygon_and_points=fraction_polygons_and_points,
        convex_divisor=convex_divisors)
 def test_parts_intersections(
-        polygon_and_points: Tuple[Polygon, List[Point]],
+        polygon_and_points: tuple[Polygon, list[Point]],
         convex_divisor: ConvexDivisorType) -> None:
     polygon, points = polygon_and_points
     graph = to_graph(polygon, points, convex_divisor=convex_divisor)
@@ -40,7 +38,7 @@ def test_parts_intersections(
 @given(polygon_and_points=fraction_polygons_and_points,
        convex_divisor=convex_divisors)
 def test_nodes_connections(
-        polygon_and_points: Tuple[Polygon, List[Point]],
+        polygon_and_points: tuple[Polygon, list[Point]],
         convex_divisor: ConvexDivisorType) -> None:
     polygon, points = polygon_and_points
     graph = to_graph(polygon, points, convex_divisor=convex_divisor)

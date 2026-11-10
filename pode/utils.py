@@ -3,9 +3,7 @@ from fractions import Fraction
 from functools import (reduce,
                        singledispatch)
 from typing import (Iterator,
-                    List,
                     Sequence,
-                    Tuple,
                     TypeVar,
                     Union)
 
@@ -28,7 +26,7 @@ T = TypeVar('T')
 
 def cut(contour: Contour,
         start: Point,
-        end: Point) -> List[Point]:
+        end: Point) -> list[Point]:
     """
     Returns all points between the start point and the end point lying
     on the counter including the endpoints themselves.
@@ -67,7 +65,7 @@ def edges(contour: Contour) -> Iterator[Segment]:
                 for index in range(len(vertices) - 1))
 
 
-def shrink_collinear_vertices(contour: Contour) -> List[Point]:
+def shrink_collinear_vertices(contour: Contour) -> list[Point]:
     vertices = list(contour.vertices)
     index = -len(vertices) + 1
     while index < 0:
@@ -179,7 +177,7 @@ def joined_constrained_delaunay_triangles(
         *,
         extra_points: Sequence[Point] = (),
         extra_constraints: Sequence[Segment] = (),
-        context: Context) -> List[Contour]:
+        context: Context) -> list[Contour]:
     """Joins polygons to form convex parts of greater size."""
     triangles = Triangulation.constrained_delaunay(
         polygon,
@@ -215,11 +213,11 @@ def joined_constrained_delaunay_triangles(
         initial_polygon = polygons.pop()
 
 
-def rotate(sequence: List[T], index: int) -> List[T]:
+def rotate(sequence: list[T], index: int) -> list[T]:
     return sequence[index:] + sequence[:index]
 
 
-def order_convex_contour_points(points: List[Point]) -> List[Point]:
+def order_convex_contour_points(points: list[Point]) -> list[Point]:
     lowest_leftmost_point_index = 0
     lowest_leftmost_point = points[lowest_leftmost_point_index]
     for index, point in enumerate(points[1:], start=1):
@@ -240,7 +238,7 @@ def order_convex_contour_points(points: List[Point]) -> List[Point]:
     cotangents_per_point = {point: cotangent(point) for point in points}
     max_tangent = max(cotangents_per_point.values())
 
-    def sorting_key(point: Point) -> Tuple[Union[Fraction, float], Fraction]:
+    def sorting_key(point: Point) -> tuple[Union[Fraction, float], Fraction]:
         tangent = cotangents_per_point[point]
         distance = lowest_leftmost_point.distance_to(point)
         factor = -1 if tangent == max_tangent else 1

@@ -1,5 +1,4 @@
-from typing import (List,
-                    Protocol,
+from typing import (Protocol,
                     Sequence)
 
 from gon.base import (Contour,
@@ -15,5 +14,5 @@ class ConvexDivisorType(Protocol):
                  *,
                  extra_points: Sequence[Point] = (),
                  extra_constraints: Sequence[Segment] = (),
-                 context: Context) -> List[Contour]:
+                 context: Context) -> list[Contour]:
         ...
