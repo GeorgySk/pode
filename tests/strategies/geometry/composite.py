@@ -26,7 +26,7 @@ from tests.strategies.geometry.base import (coordinates_strategies_factories,
                                             polygons,
                                             requirements)
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 @st.composite

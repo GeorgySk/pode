@@ -12,7 +12,7 @@ def test_data_preservation(graph: nx.Graph) -> None:
     ordered_graph = Graph.from_undirected(graph)
     assert set(graph) == set(ordered_graph)
     assert all(edge in graph.edges for edge in ordered_graph.edges)
-    assert all(ordered_graph.edges[edge]['side'] == graph.edges[edge]['side']
+    assert all(ordered_graph.edges[edge]["side"] == graph.edges[edge]["side"]
                for edge in ordered_graph.edges)
 
 

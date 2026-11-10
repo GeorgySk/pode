@@ -20,8 +20,8 @@ from gon.base import (Contour,
 from ground.base import (Context,
                          get_context)
 
-GeometryType = TypeVar('GeometryType', bound=Geometry)
-T = TypeVar('T')
+GeometryType = TypeVar("GeometryType", bound=Geometry)
+T = TypeVar("T")
 
 
 def cut(contour: Contour,
@@ -233,7 +233,7 @@ def order_convex_contour_points(points: list[Point]) -> list[Point]:
         dx = point.x - lowest_leftmost_point.x
         dy = point.y - lowest_leftmost_point.y
         return (-dx / dy if dy
-                else (float('-inf') if dx > 0 else float('inf')))
+                else (float("-inf") if dx > 0 else float("inf")))
 
     cotangents_per_point = {point: cotangent(point) for point in points}
     max_tangent = max(cotangents_per_point.values())

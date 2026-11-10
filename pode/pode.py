@@ -65,7 +65,7 @@ class Graph(nx.DiGraph):
         super().__init__(**attr)
 
     @classmethod
-    def from_undirected(cls, graph: nx.Graph) -> 'Graph':
+    def from_undirected(cls, graph: nx.Graph) -> "Graph":
         """
         Constructs an ordered and directed graph from an undirected
         graph.
@@ -76,11 +76,11 @@ class Graph(nx.DiGraph):
         directed_edges = (sorted(edge, key=ordered_nodes.index)
                           for edge in graph.edges)
         ordered_graph.add_edges_from(directed_edges)
-        for *edge, side in graph.edges.data('side'):
+        for *edge, side in graph.edges.data("side"):
             if edge in ordered_graph.edges:
-                ordered_graph.edges[edge]['side'] = side
+                ordered_graph.edges[edge]["side"] = side
             else:
-                ordered_graph.edges[edge[::-1]]['side'] = side
+                ordered_graph.edges[edge[::-1]]["side"] = side
         # there can't be more than one outcoming edges from a node
         for node in ordered_graph:
             if len(ordered_graph[node]) < 2:
@@ -92,7 +92,7 @@ class Graph(nx.DiGraph):
             for neighbor in bad_edges_nodes:
                 ordered_graph.remove_edge(node, neighbor)
         for node in ordered_graph:
-            ordered_graph.nodes[node].update({'requirements': frozenset()})
+            ordered_graph.nodes[node].update({"requirements": frozenset()})
         return ordered_graph
 
     def next_neighbor(self, polygon: Polygon) -> Optional[Polygon]:
@@ -122,9 +122,9 @@ class Graph(nx.DiGraph):
         neighbors = chain(self.neighbors(polygon), self.predecessors(polygon))
         for neighbor in neighbors:
             try:
-                edges.append(self[polygon][neighbor]['side'])
+                edges.append(self[polygon][neighbor]["side"])
             except KeyError:
-                edges.append(self[neighbor][polygon]['side'])
+                edges.append(self[neighbor][polygon]["side"])
         return edges
 
     def neighbor_edges_vertices(self, polygon: Polygon) -> list[Point]:
@@ -139,7 +139,7 @@ class Graph(nx.DiGraph):
         Mapping of the most immediate ancestors by the edges they
         touch the given polygon.
         """
-        return {self[predecessor][polygon]['side']: predecessor
+        return {self[predecessor][polygon]["side"]: predecessor
                 for predecessor in self.predecessors(polygon)}
 
     def _pred_poly_by_edges(self,
@@ -195,15 +195,15 @@ class Graph(nx.DiGraph):
 
     def prepend_two(self,
                     parts: tuple[nx.DiGraph, nx.DiGraph],
-                    target: Optional[Polygon]) -> 'Graph':
+                    target: Optional[Polygon]) -> "Graph":
         new_graph = Graph()
         new_nodes = [node for part in parts for node in part]
-        new_edges_and_sides = [(edge, part.edges[edge]['side'])
+        new_edges_and_sides = [(edge, part.edges[edge]["side"])
                                for part in parts for edge in part.edges]
         new_graph.add_nodes_from(chain(new_nodes, self.nodes))
         for edge, side in new_edges_and_sides:
             new_graph.add_edge(*edge, side=side)
-        for *edge, side in self.edges.data('side'):
+        for *edge, side in self.edges.data("side"):
             new_graph.add_edge(*edge, side=side)
         if target is not None:
             for node in new_nodes:
@@ -218,10 +218,10 @@ class Graph(nx.DiGraph):
 
     def prepend_three(self,
                       parts: tuple[nx.DiGraph, nx.DiGraph, nx.DiGraph],
-                      target: Optional[Polygon]) -> 'Graph':
+                      target: Optional[Polygon]) -> "Graph":
         new_graph = Graph()
         new_nodes = [node for part in parts for node in part]
-        new_edges_and_sides = [(edge, part.edges[edge]['side'])
+        new_edges_and_sides = [(edge, part.edges[edge]["side"])
                                for part in parts for edge in part.edges]
         new_graph.add_nodes_from(chain(new_nodes, self.nodes))
         first_connector_node = list(parts[0])[-1]
@@ -240,7 +240,7 @@ class Graph(nx.DiGraph):
         for edge, side in chain(new_edges_and_sides,
                                 new_edges_and_sides_between_parts):
             new_graph.add_edge(*edge, side=side)
-        for *edge, side in self.edges.data('side'):
+        for *edge, side in self.edges.data("side"):
             new_graph.add_edge(*edge, side=side)
         if target is not None:
             intersection = second_connector_node & target
@@ -254,7 +254,7 @@ class Graph(nx.DiGraph):
                 new_graph.nodes[node].update(graph.nodes[node])
         return new_graph
 
-    def subgraph(self, polygons: Iterable[Polygon]) -> 'Graph':
+    def subgraph(self, polygons: Iterable[Polygon]) -> "Graph":
         """
         Same as Graph.subgraph from NetworkX but preserves the order
         of the nodes as in the given iterable.
@@ -263,7 +263,7 @@ class Graph(nx.DiGraph):
         ordered_polygons = sorted(polygons, key=list(self).index)
         new_graph.add_nodes_from(ordered_polygons)
         polygons = set(ordered_polygons)
-        for *edge, side in self.edges.data('side'):
+        for *edge, side in self.edges.data("side"):
             if all(polygon in polygons for polygon in edge):
                 new_graph.add_edge(*edge, side=side)
         # Copying attributes containing requirements per node
@@ -324,7 +324,7 @@ def divide(polygon: Polygon,
         required_area = sum(requirement.area for requirement in current_sites)
         if len(current_sites) == 1 and pred_polys.area < required_area:
             neighbor = graph.next_neighbor(current_polygon)
-            edge = graph[current_polygon][neighbor]['side']
+            edge = graph[current_polygon][neighbor]["side"]
             requirement = list(current_sites)[0]
             pseudorequirement = Requirement(requirement.area - pred_polys.area,
                                             point=edge.centroid)
@@ -335,7 +335,7 @@ def divide(polygon: Polygon,
             graph.remove_nodes_from(pred_polys)
             pseudo_to_original_requirements[
                 pseudorequirement] = original_requirement
-            graph.nodes[neighbor]['requirements'] |= {pseudorequirement}
+            graph.nodes[neighbor]["requirements"] |= {pseudorequirement}
         elif len(current_sites) == 1 and pred_polys.area == required_area:
             requirement = list(current_sites)[0]
             graph.remove_nodes_from(pred_polys)
@@ -368,7 +368,7 @@ def divide(polygon: Polygon,
                     vertices = order_by_sites(vertices,
                                               list(current_sites)[0].point)
             else:
-                edge = graph[current_polygon][neighbor]['side']
+                edge = graph[current_polygon][neighbor]["side"]
                 vertices = list({*current_polygon.border.vertices,
                                  *extra_points,
                                  *(site.point for site in current_sites),
@@ -407,7 +407,7 @@ def assign_requirements(*,
     requirements_with_points = {requirement for requirement in requirements
                                 if requirement.point is not None}
     preassigned_requirements_with_points = {
-        site for node in graph for site in graph.nodes[node]['requirements']}
+        site for node in graph for site in graph.nodes[node]["requirements"]}
     if (not requirements_with_points
             and not preassigned_requirements_with_points):
         bare_requirements = [requirement for requirement in requirements
@@ -418,7 +418,7 @@ def assign_requirements(*,
         point = polygon.border.vertices[0]
         requirement = Requirement(requirement.area, point=point)
         return frozenset({requirement}), requirements
-    current_preassigned_requirements = graph.nodes[polygon]['requirements']
+    current_preassigned_requirements = graph.nodes[polygon]["requirements"]
     ancestors = nx.ancestors(graph, polygon)
     remaining_nodes = set(graph.nodes) - {polygon, *ancestors}
     if not remaining_nodes:
@@ -750,7 +750,7 @@ def to_subgraph(*,
     for edge in graph.edges:
         if old_root in edge:
             neighbor = edge[1] if edge[0] == old_root else edge[0]
-            graph.edges[edge]['side'] = new_root & neighbor
+            graph.edges[edge]["side"] = new_root & neighbor
     graph = nx.relabel_nodes(graph, {old_root: new_root})
-    graph.nodes[new_root]['requirements'] = sites
+    graph.nodes[new_root]["requirements"] = sites
     return graph

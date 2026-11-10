@@ -18,7 +18,7 @@ from tests.pode_tests.config import (MAX_CONTOUR_SIZE,
                                      MIN_HOLES_SIZE)
 from pode.utils import joined_constrained_delaunay_triangles
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 TRIANGULAR_CONTOUR_SIZE = 3
 RECTANGLE_CONTOUR_SIZE = 4
@@ -67,16 +67,16 @@ def requirements(sum_: Real,
                  base: st.SearchStrategy[Real] = st.integers()
                  ) -> st.SearchStrategy[list[Real]]:
     if size < MIN_PARTITION_SIZE:
-        raise ValueError('`size` should not be less '
-                         f'than {MIN_PARTITION_SIZE}.')
+        raise ValueError("`size` should not be less "
+                         f"than {MIN_PARTITION_SIZE}.")
     if not (0 <= min_value <= sum_):
-        raise ValueError(f'`min_value` should be in [0, {sum_}] interval.')
+        raise ValueError(f"`min_value` should be in [0, {sum_}] interval.")
     if min_value:
         max_size_approximation = sum_ / min_value
         if math.isfinite(max_size_approximation):
             max_size = floor(max_size_approximation)
             if max_size < size:
-                raise ValueError(f'`size` should not be greater than {max_size}.')
+                raise ValueError(f"`size` should not be greater than {max_size}.")
 
     def to_proportions(numbers: list[Real]) -> list[Real]:
         return [2 * abs(number) / (1 + number * number) for number in numbers]
