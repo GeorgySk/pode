@@ -123,48 +123,48 @@ def splitter_point(requirement: float,
     """Alternative to bisection search since we always have triangles."""
     if requirement <= 0:
         raise ValueError("Can't have a zero or negative requirement")
-    p = pivot
-    l = low_area_point
-    h = high_area_point
-    contour = Contour([p, l, h])
+    low = low_area_point
+    high = high_area_point
+    contour = Contour([pivot, low, high])
     triangle = Polygon(contour)
     if triangle.area < requirement:
         raise ValueError("Can't have a requirement greater than the area of "
                          "the triangle")
     r = requirement
-    dx = h.x - l.x
+    dx = high.x - low.x
     if dx == 0:
         if contour.orientation is Orientation.COUNTERCLOCKWISE:
-            a = (p.y - l.y) / (p.x - l.x)
-            b = (p.x * l.y - l.x * p.y - 2 * r) / (p.x - l.x)
-            x = l.x
-            y = a * l.x + b
+            a = (pivot.y - low.y) / (pivot.x - low.x)
+            b = (pivot.x * low.y - low.x * pivot.y - 2 * r) / (pivot.x - low.x)
+            x = low.x
+            y = a * low.x + b
             return Point(x, y)
         t = triangle.area - r
-        a = (p.y - h.y) / (p.x - h.x)
-        b = (p.x * h.y - h.x * p.y - 2 * t) / (p.x - h.x)
-        x = h.x
-        y = a * h.x + b
+        a = (pivot.y - high.y) / (pivot.x - high.x)
+        b = (pivot.x * high.y - high.x * pivot.y - 2 * t) / (pivot.x - high.x)
+        x = high.x
+        y = a * high.x + b
         return Point(x, y)
-    k = (h.y - l.y) / dx
-    m = h.y - k * h.x
+    k = (high.y - low.y) / dx
+    m = high.y - k * high.x
     if contour.orientation is Orientation.COUNTERCLOCKWISE:
-        dx = p.x - l.x
+        dx = pivot.x - low.x
         if dx == 0:
-            x = (2 * r + l.x * p.y - p.x * l.y) / (p.y - l.y)
+            x = (2 * r + low.x * pivot.y - pivot.x * low.y) / (pivot.y - low.y)
             y = k * x + m
             return Point(x, y)
-        a = (p.y - l.y) / dx
-        b = (p.x * l.y - l.x * p.y - 2 * r) / dx
+        a = (pivot.y - low.y) / dx
+        b = (pivot.x * low.y - low.x * pivot.y - 2 * r) / dx
     else:
         t = triangle.area - r
-        dx = p.x - h.x
+        dx = pivot.x - high.x
         if dx == 0:
-            x = (2 * t + h.x * p.y - p.x * h.y) / (p.y - h.y)
+            x = ((2 * t + high.x * pivot.y - pivot.x * high.y)
+                 / (pivot.y - high.y))
             y = k * x + m
             return Point(x, y)
-        a = (p.y - h.y) / dx
-        b = (p.x * h.y - h.x * p.y - 2 * t) / dx
+        a = (pivot.y - high.y) / dx
+        b = (pivot.x * high.y - high.x * pivot.y - 2 * t) / dx
     x = (m - b) / (a - k)
     y = a * x + b
     return Point(x, y)
