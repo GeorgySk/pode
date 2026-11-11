@@ -1,5 +1,7 @@
-"""Implementation the polygon decomposition algorithm by Hert, S. and
-Lumelsky, V., 1998."""
+"""
+Implementation the polygon decomposition algorithm by Hert, S. and
+Lumelsky, V., 1998.
+"""
 
 __author__ = "Georgy Skorobogatov"
 __email__ = "skorobogatovgeorgy+github@gmail.com"
