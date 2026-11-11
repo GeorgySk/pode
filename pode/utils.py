@@ -61,12 +61,14 @@ def cut(contour: Contour,
 
 
 def edges(contour: Contour) -> Iterator[Segment]:
+    """Yields the sides of the contour in the order of its vertices."""
     vertices = [*contour.vertices, contour.vertices[0]]
     yield from (Segment(vertices[index], vertices[index + 1])
                 for index in range(len(vertices) - 1))
 
 
 def shrink_collinear_vertices(contour: Contour) -> list[Point]:
+    """Returns the contour vertices except those collinear with neighbors."""
     vertices = list(contour.vertices)
     index = -len(vertices) + 1
     while index < 0:
@@ -90,6 +92,7 @@ def shrink_collinear_vertices(contour: Contour) -> list[Point]:
 
 @singledispatch
 def to_fractions(geometry: GeometryType) -> GeometryType:
+    """Converts coordinates of the geometry to fractions."""
     raise TypeError(f"Unsupported type: {type(geometry)}")
 
 
@@ -110,6 +113,7 @@ def _(geometry: Polygon) -> Polygon:
 
 
 def unite(*geometries: Shaped) -> Shaped | Empty:
+    """Returns the union of the geometries, or `EMPTY` if none given."""
     return reduce(operator.or_, geometries, EMPTY)
 
 
@@ -215,10 +219,16 @@ def joined_constrained_delaunay_triangles(
 
 
 def rotate(sequence: list[T], index: int) -> list[T]:
+    """Cyclically shifts the sequence to start from the given index."""
     return sequence[index:] + sequence[:index]
 
 
 def order_convex_contour_points(points: list[Point]) -> list[Point]:
+    """
+    Orders points on the border of a convex polygon counterclockwise.
+
+    The lowest leftmost point goes first.
+    """
     lowest_leftmost_point_index = 0
     lowest_leftmost_point = points[lowest_leftmost_point_index]
     for index, point in enumerate(points[1:], start=1):

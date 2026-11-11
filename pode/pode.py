@@ -391,6 +391,14 @@ def divide(polygon: Polygon,  # noqa: C901
 
 def validate_requirements(requirements: list[Requirement],
                           polygon: Polygon) -> None:
+    """
+    Checks that the requirements can be met for the polygon.
+
+    :param requirements: area requirements with optional sites
+    :param polygon: polygon that will be divided
+    :raises ValueError: if the areas don't sum up to 1, if a site lies
+                        outside the polygon, or if two sites coincide
+    """
     if sum(requirement.area for requirement in requirements) != 1:
         raise ValueError("Area requirements should sum up to 1.")
     sites = [requirement.point for requirement in requirements
@@ -407,6 +415,22 @@ def assign_requirements(*,
                         requirements: list[Requirement],
                         graph: Graph) -> tuple[frozenset[Requirement],
                                                list[Requirement]]:
+    """
+    Chooses the requirements to be met by the given node of the graph.
+
+    The node takes its preassigned requirements and the requirements
+    whose sites lie in it and in none of the nodes processed after its
+    PredPoly. If there are none, it takes one requirement whose site
+    lies in it. If no nodes are left after its PredPoly, it takes all
+    the requirements with sites. If no requirement has a site, the last
+    one gets anchored at the first vertex of the polygon.
+
+    :param polygon: current node of the graph
+    :param requirements: requirements that are not assigned yet
+    :param graph: graph of the polygon parts that are left to process
+    :return: requirements assigned to the node and the requirements
+             left for the other nodes
+    """
     requirements_with_points = {requirement for requirement in requirements
                                 if requirement.point is not None}
     preassigned_requirements_with_points = {
@@ -647,6 +671,16 @@ def to_requirements_per_vertex(vertices: list[Point],
 
 def normalize_areas(requirements: list[Real],
                     polygon_area: Fraction) -> list[Fraction]:
+    """
+    Converts area fractions to absolute areas of the polygon.
+
+    The last area is the remainder, so the areas sum up to exactly the
+    polygon area.
+
+    :param requirements: fractions of the polygon area
+    :param polygon_area: area of the polygon
+    :return: absolute areas
+    """
     *requirements, last_requirement = requirements
     requirements = [Fraction(requirement) * polygon_area
                     for requirement in requirements]
@@ -749,6 +783,18 @@ def to_subgraph(*,
                 new_root: Polygon,
                 sites: frozenset[Requirement],
                 graph: Graph) -> Graph:
+    """
+    Makes a graph of a part that remains after splitting a node.
+
+    :param predecessors: ancestors of the old root that go to the part
+    :param old_root: node that was split
+    :param new_root: piece of the old root that goes to the part
+    :param sites: requirements assigned to the new root
+    :param graph: graph that contains the old root and its ancestors
+    :return: subgraph of the old root and the predecessors, where the
+             old root is replaced by the new one and the `side`
+             attributes of its edges are updated
+    """
     graph = graph.subgraph([old_root, *predecessors])
     for edge in graph.edges:
         if old_root in edge:
