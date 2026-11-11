@@ -32,8 +32,8 @@ def cut(contour: Contour,
     The points do not necessarily match with contour vertices.
     """
     if any(point not in contour for point in (start, end)):
-        raise ValueError(f"Both start point and end point should lie on "
-                         f"the contour")
+        raise ValueError("Both start point and end point should lie on "
+                         "the contour")
     vertices = [*contour.vertices, contour.vertices[0]]
     start_index = (vertices.index(start) if start in vertices
                    else next((index

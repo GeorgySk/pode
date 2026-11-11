@@ -626,9 +626,9 @@ def to_requirements_per_vertex(vertices: list[Point],
     sites, so that later we can extract corresponding area requirement.
     """
     if not sites:
-        return ValueError(f"No sites given")
+        return ValueError("No sites given")
     if vertices[0] not in {site.point for site in sites}:
-        raise ValueError(f"The first vertex should be a site")
+        raise ValueError("The first vertex should be a site")
     sites_per_locations: dict[Point, Requirement] = {site.point: site
                                                      for site in sites}
     first_site = sites_per_locations[vertices[0]]
