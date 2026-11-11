@@ -194,18 +194,18 @@ def joined_constrained_delaunay_triangles(
     result = []
     while True:
         resulting_polygon = initial_polygon
-        for index, polygon in enumerate(iter(polygons)):
-            polygon_sides = set(edges(polygon.border))
+        for index, part in enumerate(iter(polygons)):
+            part_sides = set(edges(part.border))
             common_side = next((edge
                                 for edge in edges(resulting_polygon.border)
-                                if edge in polygon_sides), None)
+                                if edge in part_sides), None)
             if common_side is None:
                 continue
             has_point_on_edge = any(point in common_side
                                     for point in extra_points)
             if has_point_on_edge:
                 continue
-            union_ = unite(resulting_polygon, polygon)
+            union_ = unite(resulting_polygon, part)
             if isinstance(union_, Polygon) and union_.is_convex:
                 polygons.pop(index)
                 resulting_polygon = union_
