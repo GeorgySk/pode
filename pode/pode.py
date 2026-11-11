@@ -1,3 +1,5 @@
+"""Polygon decomposition algorithm by Hert, S. and Lumelsky, V., 1998."""
+
 from collections import defaultdict
 from collections.abc import (Iterable,
                              Iterator)

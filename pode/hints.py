@@ -1,3 +1,5 @@
+"""Type hints shared across the package."""
+
 from collections.abc import Sequence
 from typing import Protocol
 

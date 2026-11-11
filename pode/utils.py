@@ -1,3 +1,5 @@
+"""Geometric helpers used by the decomposition algorithm."""
+
 import operator
 from collections.abc import (Iterator,
                              Sequence)
