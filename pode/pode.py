@@ -9,8 +9,7 @@ from functools import cached_property
 from itertools import (chain,
                        combinations)
 from numbers import Real
-from typing import (NamedTuple,
-                    Optional)
+from typing import NamedTuple
 
 import networkx as nx
 from gon.base import (Contour,
@@ -42,7 +41,7 @@ from pode.utils import (TRIANGLE_VERTICES_COUNT,
 class Requirement(NamedTuple):
     """Area requirement with an optional point (site)."""
     area: Real
-    point: Optional[Point] = None
+    point: Point | None = None
 
 
 class PolygonsSet(frozenset[Polygon]):
@@ -94,7 +93,7 @@ class Graph(nx.DiGraph):
             ordered_graph.nodes[node].update({"requirements": frozenset()})
         return ordered_graph
 
-    def next_neighbor(self, polygon: Polygon) -> Optional[Polygon]:
+    def next_neighbor(self, polygon: Polygon) -> Polygon | None:
         """
         Most immediate successor which is a neighbor of a given node.
 
@@ -192,7 +191,7 @@ class Graph(nx.DiGraph):
 
     def prepend_two(self,
                     parts: tuple[nx.DiGraph, nx.DiGraph],
-                    target: Optional[Polygon]) -> "Graph":
+                    target: Polygon | None) -> "Graph":
         new_graph = Graph()
         new_nodes = [node for part in parts for node in part]
         new_edges_and_sides = [(edge, part.edges[edge]["side"])
@@ -215,7 +214,7 @@ class Graph(nx.DiGraph):
 
     def prepend_three(self,  # noqa: C901
                       parts: tuple[nx.DiGraph, nx.DiGraph, nx.DiGraph],
-                      target: Optional[Polygon]) -> "Graph":
+                      target: Polygon | None) -> "Graph":
         new_graph = Graph()
         new_nodes = [node for part in parts for node in part]
         new_edges_and_sides = [(edge, part.edges[edge]["side"])
@@ -294,7 +293,7 @@ def divide(polygon: Polygon,  # noqa: C901, PLR0912, PLR0915
     requirements = [requirement._replace(area=area)
                     for requirement, area in zip(requirements,
                                                  normalized_areas)]
-    resulting_parts: list[Optional[Polygon]] = [None] * len(requirements)
+    resulting_parts: list[Polygon | None] = [None] * len(requirements)
     reference_requirements = requirements.copy()
     pseudo_to_original_requirements: dict[Requirement, Requirement] = {}
     incomplete_parts: defaultdict[Requirement,
