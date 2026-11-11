@@ -29,9 +29,10 @@ def cut(contour: Contour,
         start: Point,
         end: Point) -> list[Point]:
     """
-    Returns all points between the start point and the end point lying
-    on the counter including the endpoints themselves.
-    The points do not necessarily match with contour vertices.
+    Returns all points of the contour between the start and end points.
+
+    The endpoints themselves are included. The points do not necessarily
+    match with contour vertices.
     """
     if any(point not in contour for point in (start, end)):
         raise ValueError("Both start point and end point should lie on "

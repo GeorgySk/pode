@@ -66,10 +66,7 @@ class Graph(nx.DiGraph):
 
     @classmethod
     def from_undirected(cls, graph: nx.Graph) -> "Graph":
-        """
-        Constructs an ordered and directed graph from an undirected
-        graph.
-        """
+        """Constructs an ordered directed graph from an undirected one."""
         ordered_graph = cls()
         ordered_nodes = list(nx.dfs_postorder_nodes(graph))
         ordered_graph.add_nodes_from(ordered_nodes)
@@ -107,6 +104,8 @@ class Graph(nx.DiGraph):
 
     def pred_polys(self, polygon: Polygon) -> PolygonsSet:
         """
+        Returns PredPoly of the given polygon.
+
         PredPoly is defined in the paper as the current polygon plus
         all its ancestors. In the paper ancestors are called
         "predecessors".
@@ -135,19 +134,13 @@ class Graph(nx.DiGraph):
 
     def _predecessors_by_edges(self,
                                polygon: Polygon) -> dict[Segment, Polygon]:
-        """
-        Mapping of the most immediate ancestors by the edges they
-        touch the given polygon.
-        """
+        """Maps shared sides to the polygon's immediate ancestors."""
         return {self[predecessor][polygon]["side"]: predecessor
                 for predecessor in self.predecessors(polygon)}
 
     def _pred_poly_by_edges(self,
                             polygon: Polygon) -> dict[Segment, PolygonsSet]:
-        """
-        Mapping of edges to ancestors that can be reached from the
-        given polygon.
-        """
+        """Maps shared sides to PredPolys of the immediate ancestors."""
         predecessors_by_edges = self._predecessors_by_edges(polygon)
         return {edge: self.pred_polys(predecessor)
                 for edge, predecessor in predecessors_by_edges.items()}
@@ -171,9 +164,11 @@ class Graph(nx.DiGraph):
             polygon: Polygon,
             splitter: Segment) -> RootedPolygons:
         """
-        Portion of the current polygon to the right of the splitter
-        plus all immediate ancestors accessible through the polygon
-        edges that lie on the right of the splitter.
+        Returns the part of PredPoly to the right of the splitter.
+
+        It is the portion of the current polygon to the right of the
+        splitter plus all immediate ancestors accessible through the
+        polygon edges that lie on the right of the splitter.
         """
         vertices_in_interval = cut(polygon.border,
                                    splitter.start,
@@ -255,10 +250,7 @@ class Graph(nx.DiGraph):
         return new_graph
 
     def subgraph(self, polygons: Iterable[Polygon]) -> "Graph":
-        """
-        Same as Graph.subgraph from NetworkX but preserves the order
-        of the nodes as in the given iterable.
-        """
+        """Same as NetworkX's `subgraph` but keeps the given order of nodes."""
         new_graph = Graph()
         ordered_polygons = sorted(polygons, key=list(self).index)
         new_graph.add_nodes_from(ordered_polygons)
@@ -647,9 +639,11 @@ def to_requirements_per_vertex(vertices: list[Point],
                                sites: frozenset[Requirement]
                                ) -> Iterator[frozenset[Requirement]]:
     """
-    When rotating a line head over `domain_vertices`
-    we need to get on each step a list of all previously encountered
-    sites, so that later we can extract corresponding area requirement.
+    Yields the sites encountered so far for each vertex.
+
+    When rotating a line head over `vertices` we need to get on each
+    step a list of all previously encountered sites, so that later we
+    can extract corresponding area requirement.
     """
     if not sites:
         return ValueError("No sites given")
@@ -692,9 +686,10 @@ def to_graph(polygon: Polygon,
              *,
              convex_divisor: ConvexDivisorType) -> nx.Graph:
     """
-    Converts polygon to a region-adjacency graph by dividing it to
-    parts using `convex_divisor` function. Resulting parts become nodes
-    connected when they touch each other.
+    Converts polygon to a region-adjacency graph.
+
+    The polygon is divided to parts using `convex_divisor` function.
+    Resulting parts become nodes connected when they touch each other.
 
     :param polygon: input polygon that will be split
     :param extra_points: list of points which will be used in splitting
@@ -741,8 +736,9 @@ def to_graph(polygon: Polygon,
 def order_by_sites(vertices: list[Point],
                    site_location: Point) -> list[Point]:
     """
-    Orders vertices of the convex polygon and the sites in a
-    counterclockwise manner so that the last vertex would be a site.
+    Orders vertices of the convex polygon and the sites counterclockwise.
+
+    The given site becomes the last vertex.
 
     :param vertices: convex polygon's vertices and sites
     :param site_location: site that will be the last vertex
@@ -757,9 +753,9 @@ def order_by_sites(vertices: list[Point],
 def order_by_edge(vertices: list[Point],
                   edge: Segment) -> list[Point]:
     """
-    Orders vertices of the convex polygon and the sites in a
-    counterclockwise manner so that the last edge would be the edge to
-    the next neighbor.
+    Orders vertices of the convex polygon and the sites counterclockwise.
+
+    The last edge becomes the edge to the next neighbor.
 
     :param vertices: vertices of the convex polygon and the sites
                      located on the boundary of the polygon
