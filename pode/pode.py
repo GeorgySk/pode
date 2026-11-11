@@ -325,7 +325,7 @@ def divide(polygon: Polygon,  # noqa: C901
         if len(current_sites) == 1 and pred_polys.area < required_area:
             neighbor = graph.next_neighbor(current_polygon)
             edge = graph[current_polygon][neighbor]["side"]
-            requirement = list(current_sites)[0]
+            requirement = next(iter(current_sites))
             pseudorequirement = Requirement(requirement.area - pred_polys.area,
                                             point=edge.centroid)
             pred_poly = unite(*pred_polys)
@@ -337,7 +337,7 @@ def divide(polygon: Polygon,  # noqa: C901
                 pseudorequirement] = original_requirement
             graph.nodes[neighbor]["requirements"] |= {pseudorequirement}
         elif len(current_sites) == 1 and pred_polys.area == required_area:
-            requirement = list(current_sites)[0]
+            requirement = next(iter(current_sites))
             graph.remove_nodes_from(pred_polys)
             if requirement not in pseudo_to_original_requirements:
                 resulting_part = unite(*pred_polys)
@@ -366,7 +366,7 @@ def divide(polygon: Polygon,  # noqa: C901
                                  *extra_points})
                 if current_sites:
                     vertices = order_by_sites(vertices,
-                                              list(current_sites)[0].point)
+                                              next(iter(current_sites)).point)
             else:
                 edge = graph[current_polygon][neighbor]["side"]
                 vertices = list({*current_polygon.border.vertices,
@@ -474,7 +474,7 @@ def split(*,  # noqa: C901
     heads = vertices[first_head_index:]
     if len(sites) == 1:
         sites_per_vertex = [sites] * len(vertices)
-        requirements = [list(sites)[0].area] * len(vertices)
+        requirements = [next(iter(sites)).area] * len(vertices)
     else:
         sites_per_vertex = list(to_requirements_per_vertex(heads, sites))
         requirements = [sum(site.area for site in sites_)

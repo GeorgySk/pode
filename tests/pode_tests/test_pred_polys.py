@@ -14,7 +14,7 @@ def test_first_node(graph: Graph) -> None:
     note(f"First node: {first_node}")
     pred_poly = graph.pred_polys(first_node)
     assert len(pred_poly) == 1
-    assert list(pred_poly)[0] == first_node
+    assert next(iter(pred_poly)) == first_node
 
 
 @given(graph=graphs,
