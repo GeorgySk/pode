@@ -481,7 +481,7 @@ def split(*,  # noqa: C901
     if polygon.border.orientation is not Orientation.COUNTERCLOCKWISE:
         raise ValueError("Polygon division is implemented only for polygons "
                          "oriented counter-clockwise")
-    sites_locations = set(site.point for site in sites)
+    sites_locations = {site.point for site in sites}
     first_site_index, first_site_point = next(
         ((index, vertex) for index, vertex in enumerate(vertices[1:], start=1)
          if vertex in sites_locations), (0, vertices[0]))
