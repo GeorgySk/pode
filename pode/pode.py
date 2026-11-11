@@ -25,7 +25,8 @@ from gon.hints import Maybe
 from ground.base import get_context
 
 from pode.hints import ConvexDivisorType
-from pode.utils import (cut,
+from pode.utils import (TRIANGLE_VERTICES_COUNT,
+                        cut,
                         edges,
                         order_convex_contour_points,
                         orient,
@@ -82,7 +83,7 @@ class Graph(nx.DiGraph):
                 ordered_graph.edges[edge[::-1]]["side"] = side
         # there can't be more than one outcoming edges from a node
         for node in ordered_graph:
-            if len(ordered_graph[node]) < 2:
+            if len(ordered_graph[node]) <= 1:
                 continue
             most_immediate_successor = cls.next_neighbor(ordered_graph,
                                                          node)
@@ -177,7 +178,7 @@ class Graph(nx.DiGraph):
         vertices_in_interval = cut(polygon.border,
                                    splitter.start,
                                    splitter.end)
-        if len(vertices_in_interval) < 3:
+        if len(vertices_in_interval) < TRIANGLE_VERTICES_COUNT:
             current_polygon_part = EMPTY
         else:
             contour = Contour(shrink_collinear_vertices(
@@ -379,8 +380,11 @@ def divide(polygon: Polygon,  # noqa: C901
                           sites=current_sites,
                           graph=graph)
             graph.remove_nodes_from(pred_polys)
-            graph = (graph.prepend_two(parts, neighbor) if len(parts) == 2
-                     else graph.prepend_three(parts, neighbor))
+            match parts:
+                case (_, _):
+                    graph = graph.prepend_two(parts, neighbor)
+                case (_, _, _):
+                    graph = graph.prepend_three(parts, neighbor)
         remaining_nodes = iter(graph.nodes)
     return resulting_parts
 
@@ -691,7 +695,7 @@ def to_graph(polygon: Polygon,
                 for side in edges(part.border):
                     parts_per_sides[side].add(part)
             for side, parts in parts_per_sides.items():
-                if len(parts) == 2:
+                if len(parts) > 1:  # shared by two parts
                     graph.add_edge(*parts, side=side)
         else:
             pairs: Iterator[tuple[Polygon, Polygon]] = combinations(parts, 2)

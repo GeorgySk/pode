@@ -22,6 +22,8 @@ from ground.base import (Context,
 GeometryType = TypeVar("GeometryType", bound=Geometry)
 T = TypeVar("T")
 
+TRIANGLE_VERTICES_COUNT = 3
+
 
 def cut(contour: Contour,
         start: Point,
