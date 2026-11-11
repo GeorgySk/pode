@@ -17,4 +17,14 @@ class ConvexDivisorType(Protocol):
                  extra_points: Sequence[Point] = (),
                  extra_constraints: Sequence[Segment] = (),
                  context: Context) -> list[Contour]:
-        ...
+        """
+        Divides the polygon into convex parts.
+
+        :param polygon: polygon to divide
+        :param extra_points: points that must become vertices of the
+                             parts
+        :param extra_constraints: segments that must lie on the borders
+                                  of the parts
+        :param context: geometric context
+        :return: borders of the convex parts
+        """

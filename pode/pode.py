@@ -47,6 +47,7 @@ class Requirement(NamedTuple):
 class PolygonsSet(frozenset[Polygon]):
     @cached_property
     def area(self) -> Fraction:
+        """Total area of the polygons."""
         return sum(polygon.area for polygon in self)
 
 
@@ -57,6 +58,7 @@ class RootedPolygons:
 
     @cached_property
     def area(self) -> Fraction:
+        """Total area of the root and the predecessors."""
         root_area = 0 if self.root is EMPTY else self.root.area
         return root_area + self.predecessors.area
 
@@ -128,6 +130,7 @@ class Graph(nx.DiGraph):
         return edges
 
     def neighbor_edges_vertices(self, polygon: Polygon) -> list[Point]:
+        """Returns endpoints of the sides shared with the neighbors."""
         vertices = []
         for edge in self._edges_with_neighbors(polygon):
             vertices.extend((edge.start, edge.end))
@@ -149,6 +152,12 @@ class Graph(nx.DiGraph):
     def pred_poly_by_line(self,
                           polygon: Polygon,
                           splitter: Segment) -> PolygonsSet:
+        """
+        Returns ancestors reachable through sides right of the splitter.
+
+        These are PredPolys of the immediate ancestors that touch the
+        polygon by the edges lying on the right of the splitter.
+        """
         pred_poly_by_edges = self._pred_poly_by_edges(polygon)
         vertices_in_interval = cut(polygon.border,
                                    splitter.start,
@@ -187,11 +196,21 @@ class Graph(nx.DiGraph):
     def pll(self,
             polygon: Polygon,
             splitter: Segment) -> RootedPolygons:
+        """Returns the part of PredPoly to the left of the splitter."""
         return self.plr(polygon, Segment(splitter.end, splitter.start))
 
     def prepend_two(self,
                     parts: tuple[nx.DiGraph, nx.DiGraph],
                     target: Polygon | None) -> "Graph":
+        """
+        Puts two parts of a split node before the remaining nodes.
+
+        Nodes of the parts that touch the target get connected to it.
+
+        :param parts: graphs of the parts the node was split into
+        :param target: next neighbor of the split node, if any
+        :return: new graph where the nodes of the parts go first
+        """
         new_graph = Graph()
         new_nodes = [node for part in parts for node in part]
         new_edges_and_sides = [(edge, part.edges[edge]["side"])
@@ -215,6 +234,17 @@ class Graph(nx.DiGraph):
     def prepend_three(self,  # noqa: C901
                       parts: tuple[nx.DiGraph, nx.DiGraph, nx.DiGraph],
                       target: Polygon | None) -> "Graph":
+        """
+        Puts three parts of a split node before the remaining nodes.
+
+        The parts get chained: the last node of the first part leads to
+        the nodes of the second part that touch it, those lead to the
+        last node of the third part, and that one leads to the target.
+
+        :param parts: graphs of the parts the node was split into
+        :param target: next neighbor of the split node, if any
+        :return: new graph where the nodes of the parts go first
+        """
         new_graph = Graph()
         new_nodes = [node for part in parts for node in part]
         new_edges_and_sides = [(edge, part.edges[edge]["side"])
