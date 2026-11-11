@@ -45,6 +45,8 @@ class Requirement(NamedTuple):
 
 
 class PolygonsSet(frozenset[Polygon]):
+    """Set of polygons with their total area."""
+
     @cached_property
     def area(self) -> Fraction:
         """Total area of the polygons."""
@@ -53,6 +55,13 @@ class PolygonsSet(frozenset[Polygon]):
 
 @dataclass(frozen=True)
 class RootedPolygons:
+    """
+    Portion of a node together with the ancestors attached to it.
+
+    The root is the portion of the node, which can be `EMPTY`, and the
+    predecessors are the ancestors that go with it.
+    """
+
     root: Maybe[Polygon]
     predecessors: PolygonsSet
 
@@ -64,6 +73,15 @@ class RootedPolygons:
 
 
 class Graph(nx.DiGraph):
+    """
+    Directed graph of the convex parts of the polygon.
+
+    The nodes are ordered as they are processed, and each node has at
+    most one outgoing edge, to its next neighbor. Edges keep the shared
+    sides in the `side` attribute, and nodes keep the requirements
+    assigned to them in the `requirements` attribute.
+    """
+
     @classmethod
     def from_undirected(cls, graph: nx.Graph) -> "Graph":
         """Constructs an ordered directed graph from an undirected one."""

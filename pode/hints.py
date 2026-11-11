@@ -11,6 +11,8 @@ from ground.base import Context
 
 
 class ConvexDivisorType(Protocol):
+    """Function that divides a polygon into convex parts."""
+
     def __call__(self,
                  polygon: Polygon,
                  *,
