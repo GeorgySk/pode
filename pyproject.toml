@@ -113,7 +113,9 @@ ignore = [
     # raising built-in exceptions whenever their meaning fits.
     "TRY003",
     # Opinion-based import formatting
-    "I001"
+    "I001",
+    # blank lines after class docstring get triggered even for NamedTuple
+    "D204"
 ]
 
 [tool.ruff.lint.per-file-ignores]
