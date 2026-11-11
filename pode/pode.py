@@ -497,8 +497,8 @@ def split(*,  # noqa: C901
         sites_per_vertex = list(to_requirements_per_vertex(heads, sites))
         requirements = [sum(site.area for site in sites_)
                         for sites_ in sites_per_vertex]
-    for (plr, head_index,
-         requirement, right_sites) in zip(plrs, head_indices,
+    for (plr, head_index,  # noqa: B007
+         requirement, right_sites) in zip(plrs, head_indices,  # noqa: B007
                                           requirements, sites_per_vertex):
         if plr.area >= requirement:
             break
@@ -509,7 +509,8 @@ def split(*,  # noqa: C901
             origins = vertices[first_site_index - 1::-1]
             plrs = [graph.plr(polygon, Segment(origin, first_site_point))
                     for origin in origins]
-            for plr, origin_index in zip(plrs, origins_indices):
+            for plr, origin_index in zip(  # noqa: B007
+                    plrs, origins_indices):
                 if plr.area >= requirement:
                     break
             pivot_index = head_index
