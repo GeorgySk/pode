@@ -266,7 +266,7 @@ class Graph(nx.DiGraph):
         return new_graph
 
 
-def divide(polygon: Polygon,  # noqa: C901
+def divide(polygon: Polygon,  # noqa: C901, PLR0912, PLR0915
            requirements: list[Requirement],
            convex_divisor: ConvexDivisorType
            = Triangulation.constrained_delaunay
@@ -470,7 +470,7 @@ def assign_requirements(*,
     return frozenset([current_requirement]), leftover_requirements
 
 
-def split(*,  # noqa: C901
+def split(*,  # noqa: C901, PLR0912, PLR0915
           polygon: Polygon,
           vertices: list[Point],
           sites: frozenset[Requirement],
