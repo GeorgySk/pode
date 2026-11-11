@@ -16,8 +16,7 @@ from gon.base import (Contour,
                       Segment,
                       Shaped,
                       Triangulation)
-from ground.base import (Context,
-                         get_context)
+from ground.base import Context
 
 GeometryType = TypeVar("GeometryType", bound=Geometry)
 T = TypeVar("T")
