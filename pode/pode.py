@@ -579,70 +579,68 @@ def split(*,  # noqa: C901
                             sites=sites - right_sites,
                             graph=graph)
             return a, b
-        else:
-            ps = Multipoint([low_area_point, high_area_point]).centroid
-            if (Vector(low_area_point, pivot_point).orientation_of(ps)
-                    is Orientation.COLLINEAR):
-                index = pivot_index
-                while True:
-                    index -= 1
-                    temp_point = vertices[index]
-                    if Vector(low_area_point, pivot_point).orientation_of(
-                            temp_point) is not Orientation.COLLINEAR:
-                        new_splitter_tail = Multipoint(
-                            [temp_point, vertices[index + 1]]).centroid
-                        break
-                new_splitter_head = edge.centroid
-                splitter = Segment(new_splitter_tail, new_splitter_head)
-                plr_1 = graph.plr(polygon, splitter)
-                pll_1 = graph.pll(polygon, splitter)
-                pred_by_line = graph.pred_poly_by_line(polygon, edge)
-                a = graph.subgraph(pred_by_line)
-                b = to_subgraph(predecessors=plr_1.predecessors - pred_by_line,
-                                old_root=polygon,
-                                new_root=plr_1.root,
-                                sites=right_sites,
-                                graph=graph)
-                c = to_subgraph(predecessors=pll_1.predecessors - pred_by_line,
-                                old_root=polygon,
-                                new_root=pll_1.root,
-                                sites=sites - right_sites,
-                                graph=graph)
-                return b, a, c
-            triangle = Polygon(Contour([low_area_point, ps, pivot_point]))
-            edge = (Segment(low_area_point, high_area_point)
-                    if pivot_index == 0
-                    else Segment(high_area_point, low_area_point))
+        ps = Multipoint([low_area_point, high_area_point]).centroid
+        if (Vector(low_area_point, pivot_point).orientation_of(ps)
+                is Orientation.COLLINEAR):
+            index = pivot_index
+            while True:
+                index -= 1
+                temp_point = vertices[index]
+                if Vector(low_area_point, pivot_point).orientation_of(
+                        temp_point) is not Orientation.COLLINEAR:
+                    new_splitter_tail = Multipoint(
+                        [temp_point, vertices[index + 1]]).centroid
+                    break
+            new_splitter_head = edge.centroid
+            splitter = Segment(new_splitter_tail, new_splitter_head)
+            plr_1 = graph.plr(polygon, splitter)
+            pll_1 = graph.pll(polygon, splitter)
             pred_by_line = graph.pred_poly_by_line(polygon, edge)
             a = graph.subgraph(pred_by_line)
-            b = to_subgraph(predecessors=plr_1.predecessors,
+            b = to_subgraph(predecessors=plr_1.predecessors - pred_by_line,
                             old_root=polygon,
-                            new_root=plr_1.root | triangle,
+                            new_root=plr_1.root,
                             sites=right_sites,
                             graph=graph)
             c = to_subgraph(predecessors=pll_1.predecessors - pred_by_line,
                             old_root=polygon,
-                            new_root=pll_1.root - triangle,
+                            new_root=pll_1.root,
                             sites=sites - right_sites,
                             graph=graph)
             return b, a, c
-    else:
-        t = Multipoint([vertices[-1], vertices[0]]).centroid
-        splitter = Segment(t, first_site_point)
-        plr_1 = graph.plr(polygon, splitter)
-        pll_1 = graph.pll(polygon, splitter)
-        first_site_set = sites_per_vertex[0]
-        a = to_subgraph(predecessors=plr_1.predecessors,
+        triangle = Polygon(Contour([low_area_point, ps, pivot_point]))
+        edge = (Segment(low_area_point, high_area_point)
+                if pivot_index == 0
+                else Segment(high_area_point, low_area_point))
+        pred_by_line = graph.pred_poly_by_line(polygon, edge)
+        a = graph.subgraph(pred_by_line)
+        b = to_subgraph(predecessors=plr_1.predecessors,
                         old_root=polygon,
-                        new_root=plr_1.root,
-                        sites=first_site_set,
+                        new_root=plr_1.root | triangle,
+                        sites=right_sites,
                         graph=graph)
-        b = to_subgraph(predecessors=pll_1.predecessors,
+        c = to_subgraph(predecessors=pll_1.predecessors - pred_by_line,
                         old_root=polygon,
-                        new_root=pll_1.root,
-                        sites=sites - first_site_set,
+                        new_root=pll_1.root - triangle,
+                        sites=sites - right_sites,
                         graph=graph)
-        return b, a
+        return b, a, c
+    t = Multipoint([vertices[-1], vertices[0]]).centroid
+    splitter = Segment(t, first_site_point)
+    plr_1 = graph.plr(polygon, splitter)
+    pll_1 = graph.pll(polygon, splitter)
+    first_site_set = sites_per_vertex[0]
+    a = to_subgraph(predecessors=plr_1.predecessors,
+                    old_root=polygon,
+                    new_root=plr_1.root,
+                    sites=first_site_set,
+                    graph=graph)
+    b = to_subgraph(predecessors=pll_1.predecessors,
+                    old_root=polygon,
+                    new_root=pll_1.root,
+                    sites=sites - first_site_set,
+                    graph=graph)
+    return b, a
 
 
 def to_requirements_per_vertex(vertices: list[Point],

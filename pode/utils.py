@@ -53,8 +53,7 @@ def cut(contour: Contour,
         segment_to_end = Segment(vertices[start_index], end)
         if segment_to_start.length < segment_to_end.length:
             return [start, end]
-        else:
-            result = vertices[start_index + 1:-1] + vertices[:end_index + 1]
+        result = vertices[start_index + 1:-1] + vertices[:end_index + 1]
     head = [vertices[start_index]] if start in vertices else [start]
     tail = [] if end in vertices else [end]
     return head + result + tail
@@ -141,13 +140,12 @@ def splitter_point(requirement: float,
             x = l.x
             y = a * l.x + b
             return Point(x, y)
-        else:
-            t = triangle.area - r
-            a = (p.y - h.y) / (p.x - h.x)
-            b = (p.x * h.y - h.x * p.y - 2 * t) / (p.x - h.x)
-            x = h.x
-            y = a * h.x + b
-            return Point(x, y)
+        t = triangle.area - r
+        a = (p.y - h.y) / (p.x - h.x)
+        b = (p.x * h.y - h.x * p.y - 2 * t) / (p.x - h.x)
+        x = h.x
+        y = a * h.x + b
+        return Point(x, y)
     k = (h.y - l.y) / dx
     m = h.y - k * h.x
     if contour.orientation is Orientation.COUNTERCLOCKWISE:
