@@ -102,6 +102,10 @@ ignore = [
     "RUF001",
     "RUF002",
     "RUF003",
+    # RUF021 wants parentheses around `and` when it is chained with `or`.
+    # That `and` binds tighter than `or` is basic Boolean algebra
+    # knowledge, just like `*` binding tighter than `+`.
+    "RUF021",
     # TRY003 wants long exception messages moved into custom exception
     # classes. That only pays off when callers need to catch a specific
     # error or the same message is raised from many places. Otherwise it
