@@ -64,9 +64,6 @@ class RootedPolygons:
 
 
 class Graph(nx.DiGraph):
-    def __init__(self, **attr) -> None:
-        super().__init__(**attr)
-
     @classmethod
     def from_undirected(cls, graph: nx.Graph) -> "Graph":
         """Constructs an ordered directed graph from an undirected one."""
