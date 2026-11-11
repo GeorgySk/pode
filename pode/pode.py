@@ -8,8 +8,7 @@ from itertools import (chain,
                        combinations)
 from numbers import Real
 from typing import (NamedTuple,
-                    Optional,
-                    Union)
+                    Optional)
 
 import networkx as nx
 from gon.base import (Contour,
@@ -454,8 +453,8 @@ def split(*,  # noqa: C901
           vertices: list[Point],
           sites: frozenset[Requirement],
           graph: Graph
-          ) -> Union[tuple[nx.DiGraph, nx.DiGraph],
-                     tuple[nx.DiGraph, nx.DiGraph, nx.DiGraph]]:
+          ) -> (tuple[nx.DiGraph, nx.DiGraph]
+                | tuple[nx.DiGraph, nx.DiGraph, nx.DiGraph]):
     """Splits a PredPoly to 2 or 3 parts for further division."""
     if polygon.border.orientation is not Orientation.COUNTERCLOCKWISE:
         raise ValueError("Polygon division is implemented only for polygons "

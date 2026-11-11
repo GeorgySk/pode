@@ -4,8 +4,7 @@ from collections.abc import (Iterator,
 from fractions import Fraction
 from functools import (reduce,
                        singledispatch)
-from typing import (TypeVar,
-                    Union)
+from typing import TypeVar
 
 from gon.base import (Contour,
                       EMPTY,
@@ -108,7 +107,7 @@ def _(geometry: Polygon) -> Polygon:
                    list(map(to_fractions, geometry.holes)))
 
 
-def unite(*geometries: Shaped) -> Union[Shaped, Empty]:
+def unite(*geometries: Shaped) -> Shaped | Empty:
     return reduce(operator.or_, geometries, EMPTY)
 
 
@@ -229,7 +228,7 @@ def order_convex_contour_points(points: list[Point]) -> list[Point]:
     points = (points[:lowest_leftmost_point_index]
               + points[lowest_leftmost_point_index + 1:])
 
-    def cotangent(point: Point) -> Union[Fraction, float]:
+    def cotangent(point: Point) -> Fraction | float:
         dx = point.x - lowest_leftmost_point.x
         dy = point.y - lowest_leftmost_point.y
         return (-dx / dy if dy
@@ -238,7 +237,7 @@ def order_convex_contour_points(points: list[Point]) -> list[Point]:
     cotangents_per_point = {point: cotangent(point) for point in points}
     max_tangent = max(cotangents_per_point.values())
 
-    def sorting_key(point: Point) -> tuple[Union[Fraction, float], Fraction]:
+    def sorting_key(point: Point) -> tuple[Fraction | float, Fraction]:
         tangent = cotangents_per_point[point]
         distance = lowest_leftmost_point.distance_to(point)
         factor = -1 if tangent == max_tangent else 1
