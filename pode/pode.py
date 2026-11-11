@@ -717,21 +717,20 @@ def to_graph(polygon: Polygon,
     parts = list(map(Polygon, parts))
     if len(parts) == 1:
         graph.add_nodes_from(parts)
+    elif convex_divisor is Triangulation.constrained_delaunay:
+        parts_per_sides = defaultdict(set)
+        for part in parts:
+            for side in edges(part.border):
+                parts_per_sides[side].add(part)
+        for side, parts in parts_per_sides.items():
+            if len(parts) > 1:  # shared by two parts
+                graph.add_edge(*parts, side=side)
     else:
-        if convex_divisor is Triangulation.constrained_delaunay:
-            parts_per_sides = defaultdict(set)
-            for part in parts:
-                for side in edges(part.border):
-                    parts_per_sides[side].add(part)
-            for side, parts in parts_per_sides.items():
-                if len(parts) > 1:  # shared by two parts
-                    graph.add_edge(*parts, side=side)
-        else:
-            pairs: Iterator[tuple[Polygon, Polygon]] = combinations(parts, 2)
-            for part, other in pairs:
-                intersection = part & other
-                if isinstance(intersection, Segment):
-                    graph.add_edge(part, other, side=intersection)
+        pairs: Iterator[tuple[Polygon, Polygon]] = combinations(parts, 2)
+        for part, other in pairs:
+            intersection = part & other
+            if isinstance(intersection, Segment):
+                graph.add_edge(part, other, side=intersection)
     return graph
 
 
