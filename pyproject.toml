@@ -115,7 +115,9 @@ ignore = [
     # Opinion-based import formatting
     "I001",
     # blank lines after class docstring get triggered even for NamedTuple
-    "D204"
+    "D204",
+    # Unnecessary parenthesis around boolean multiplication.
+    "RUF021"
 ]
 
 [tool.ruff.lint.per-file-ignores]

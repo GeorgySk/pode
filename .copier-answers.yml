@@ -1,5 +1,5 @@
 # Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
-_commit: v0.28.4
+_commit: v0.29.1
 _src_path: gh:GeorgySk/copier-pypackage
 ci_provider: github
 email: skorobogatovgeorgy+github@gmail.com

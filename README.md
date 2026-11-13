@@ -154,7 +154,7 @@ One-time setup:
 
 ### Linting, formatting and type checking
 
-[Ruff](https://docs.astral.sh/ruff/) is used for both linting and formatting
+[Ruff](https://docs.astral.sh/ruff/) is used for linting
 (installed with the `dev` dependency group).
 
 Check code
@@ -165,11 +165,6 @@ ruff check .
 Fix automatically fixable issues
 ```bash
 ruff check --fix .
-```
-
-Format code
-```bash
-ruff format .
 ```
 
 [mypy](https://mypy.readthedocs.io/) checks types in strict mode
