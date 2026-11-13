@@ -8,7 +8,6 @@ from fractions import Fraction
 from functools import cached_property
 from itertools import (chain,
                        combinations)
-from numbers import Real
 from typing import NamedTuple
 
 import networkx as nx
@@ -25,7 +24,8 @@ from gon.base import (Contour,
 from gon.hints import Maybe
 from ground.base import get_context
 
-from pode.hints import ConvexDivisorType
+from pode.hints import (ConvexDivisorType,
+                        Scalar)
 from pode.utils import (TRIANGLE_VERTICES_COUNT,
                         cut,
                         edges,
@@ -40,7 +40,7 @@ from pode.utils import (TRIANGLE_VERTICES_COUNT,
 
 class Requirement(NamedTuple):
     """Area requirement with an optional point (site)."""
-    area: Real
+    area: Scalar
     point: Point | None = None
 
 
@@ -708,7 +708,7 @@ def to_requirements_per_vertex(vertices: list[Point],
         yield accumulated_sites
 
 
-def normalize_areas(requirements: list[Real],
+def normalize_areas(requirements: list[Scalar],
                     polygon_area: Fraction) -> list[Fraction]:
     """
     Converts area fractions to absolute areas of the polygon.

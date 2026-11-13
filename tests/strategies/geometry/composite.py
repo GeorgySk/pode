@@ -2,7 +2,6 @@ from collections.abc import (Callable,
                              Iterable)
 from fractions import Fraction
 from itertools import zip_longest
-from numbers import Real
 from typing import TypeVar
 
 from gon.base import (Contour,
@@ -13,6 +12,7 @@ from gon.base import (Contour,
 from hypothesis import strategies as st
 from hypothesis_geometry import planar
 
+from pode.hints import Scalar
 from pode.pode import Requirement
 from pode.utils import edges
 from tests.pode_tests.config import (MAX_SITES_COUNT,
@@ -109,7 +109,8 @@ def _vertices_and_sites(draw: Callable[[st.SearchStrategy[T]], T]
     return multipoint.points, sites
 
 
-def _bounding_box(points: Iterable[Point]) -> tuple[Real, Real, Real, Real]:
+def _bounding_box(points: Iterable[Point]
+                  ) -> tuple[Scalar, Scalar, Scalar, Scalar]:
     """Builds bounding box from points."""
     points = ((point.x, point.y) for point in points)
     x_min, y_min = x_max, y_max = next(points)
