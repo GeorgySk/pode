@@ -54,6 +54,14 @@ addopts = "--verbose -s --hypothesis-profile=default"
 [tool.mypy]
 strict = true
 
+[[tool.mypy.overrides]]
+# These packages don't ship a `py.typed` marker and have no stub packages.
+# Their inline annotations aren't usable either: e.g. `gon.base.Point`
+# subclasses `gon.core.point.Point`, whose methods return the latter, and
+# `Scalar` resolves to an unknown type. So we treat them as `Any`.
+module = ["gon.*", "ground.*", "hypothesis_geometry.*", "sect.*"]
+ignore_missing_imports = true
+
 [tool.ruff]
 line-length = 79
 
