@@ -1,4 +1,5 @@
 import networkx as nx
+from gon.base import Polygon
 from hypothesis import (assume,
                         given,
                         note)
@@ -8,7 +9,7 @@ from tests.strategies.graphs import unordered_graphs
 
 
 @given(unordered_graphs)
-def test_data_preservation(graph: nx.Graph) -> None:
+def test_data_preservation(graph: "nx.Graph[Polygon]") -> None:
     ordered_graph = Graph.from_undirected(graph)
     assert set(graph) == set(ordered_graph)
     assert all(edge in graph.edges for edge in ordered_graph.edges)
@@ -17,14 +18,14 @@ def test_data_preservation(graph: nx.Graph) -> None:
 
 
 @given(unordered_graphs)
-def test_bidirected_edges(graph: nx.Graph) -> None:
+def test_bidirected_edges(graph: "nx.Graph[Polygon]") -> None:
     ordered_graph = Graph.from_undirected(graph)
     ordered_edges = map(tuple, map(sorted, ordered_graph.edges))
     assert len(ordered_graph.edges) == len(set(ordered_edges))
 
 
 @given(unordered_graphs)
-def test_outcoming_edges(graph: nx.Graph) -> None:
+def test_outcoming_edges(graph: "nx.Graph[Polygon]") -> None:
     note(f"Nodes: {list(graph)}")
     note(f"Edges: {list(graph.edges)}")
     assume(len(graph) > 1)
