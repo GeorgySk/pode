@@ -31,7 +31,7 @@ dev = [
     "pytest>=9.0.2,<10.0.0",
     "pytest-cov>=7.0.0,<8.0.0",
     # fixed for easier way to reproduce across various machines
-    "hypothesis==6.150.2",
+    "hypothesis==6.170.15",
     "hypothesis-geometry>=7.3.0,<8.0.0",
     # keep in sync with the ruff-pre-commit rev in .pre-commit-config.yaml
     "ruff==0.17.4",
