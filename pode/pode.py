@@ -318,6 +318,7 @@ class Graph(_PolygonsDiGraph):
         ordered_polygons = sorted(polygons, key=list(self).index)
         new_graph.add_nodes_from(ordered_polygons)
         polygons = set(ordered_polygons)
+        side: Segment
         for *edge, side in self.edges.data("side"):
             if all(polygon in polygons for polygon in edge):
                 new_graph.add_edge(*edge, side=side)
