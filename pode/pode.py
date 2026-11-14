@@ -50,7 +50,9 @@ class PolygonsSet(frozenset[Polygon]):
     @cached_property
     def area(self) -> Fraction:
         """Total area of the polygons."""
-        return sum(polygon.area for polygon in self)
+        areas: Iterator[Fraction] = (polygon.area for polygon in self)
+        # `sum` of an empty set is the int 0, hence the conversion
+        return Fraction(sum(areas))
 
 
 @dataclass(frozen=True)
