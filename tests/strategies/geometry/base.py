@@ -46,12 +46,13 @@ coordinates_strategies = st.sampled_from([
 
 def coordinates_to_polygons(coordinates: st.SearchStrategy[Scalar]
                             ) -> st.SearchStrategy[Polygon]:
-    return planar.polygons(
+    strategy: st.SearchStrategy[Polygon] = planar.polygons(
         coordinates,
         min_size=MIN_CONTOUR_SIZE,
         max_size=MAX_CONTOUR_SIZE,
         min_holes_size=MIN_HOLES_SIZE,
         max_holes_size=MAX_HOLES_SIZE)
+    return strategy
 
 
 def coordinates_to_multipoints(coordinates: st.SearchStrategy[Scalar]
