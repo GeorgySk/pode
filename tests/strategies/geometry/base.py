@@ -1,4 +1,5 @@
 import math
+from collections.abc import Callable
 from fractions import Fraction
 from math import floor
 from typing import TypeVar
@@ -32,9 +33,12 @@ fraction_triangles = planar.polygons(fractions,
 convex_divisors = st.sampled_from([Triangulation.constrained_delaunay,
                                    joined_constrained_delaunay_triangles])
 
-coordinates_strategies_factories = {int: st.integers,
-                                    Fraction: st.fractions,
-                                    float: st.floats}
+# each factory takes bounds of its own type, which a `dict` type can't express
+coordinates_strategies_factories: dict[
+    type[Scalar], Callable[..., st.SearchStrategy[Scalar]]
+] = {int: st.integers,
+     Fraction: st.fractions,
+     float: st.floats}
 coordinates_strategies = st.sampled_from([
     factory(MIN_COORDINATE, MAX_COORDINATE)
     for factory in coordinates_strategies_factories.values()])
