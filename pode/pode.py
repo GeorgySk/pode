@@ -837,7 +837,7 @@ def order_by_edge(vertices: list[Point],
 
 
 def to_subgraph(*,
-                predecessors: PolygonsSet,
+                predecessors: Iterable[Polygon],
                 old_root: Polygon,
                 new_root: Polygon,
                 sites: frozenset[Requirement],
