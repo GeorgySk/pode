@@ -20,6 +20,8 @@ from gon.base import (Contour,
                       Triangulation)
 from ground.base import Context
 
+from pode.hints import Scalar
+
 GeometryType = TypeVar("GeometryType", bound=Geometry)
 T = TypeVar("T")
 
@@ -118,7 +120,7 @@ def unite(*geometries: Shaped) -> Shaped | Empty:
     return reduce(operator.or_, geometries, EMPTY)
 
 
-def splitter_point(requirement: float,
+def splitter_point(requirement: Scalar,
                    pivot: Point,
                    low_area_point: Point,
                    high_area_point: Point) -> Point:
