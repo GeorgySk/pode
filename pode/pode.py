@@ -94,7 +94,7 @@ class Graph(_PolygonsDiGraph):
     """
 
     @classmethod
-    def from_undirected(cls, graph: nx.Graph) -> "Graph":
+    def from_undirected(cls, graph: "nx.Graph[Polygon]") -> "Graph":
         """Constructs an ordered directed graph from an undirected one."""
         ordered_graph = cls()
         ordered_nodes = list(nx.dfs_postorder_nodes(graph))
