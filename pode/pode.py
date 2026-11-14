@@ -8,7 +8,8 @@ from fractions import Fraction
 from functools import cached_property
 from itertools import (chain,
                        combinations)
-from typing import NamedTuple
+from typing import (TYPE_CHECKING,
+                    NamedTuple)
 
 import networkx as nx
 from gon.base import (Contour,
@@ -74,7 +75,15 @@ class RootedPolygons:
         return root_area + self.predecessors.area
 
 
-class Graph(nx.DiGraph):
+# networkx classes are generic only in the stubs, at runtime they can't be
+# parametrized
+if TYPE_CHECKING:
+    _PolygonsDiGraph = nx.DiGraph[Polygon]
+else:
+    _PolygonsDiGraph = nx.DiGraph
+
+
+class Graph(_PolygonsDiGraph):
     """
     Directed graph of the convex parts of the polygon.
 
