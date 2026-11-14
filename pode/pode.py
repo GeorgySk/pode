@@ -312,7 +312,7 @@ class Graph(_PolygonsDiGraph):
                 new_graph.nodes[node].update(graph.nodes[node])
         return new_graph
 
-    def subgraph(self, polygons: Iterable[Polygon]) -> "Graph":
+    def ordered_subgraph(self, polygons: Iterable[Polygon]) -> "Graph":
         """Same as NetworkX's `subgraph` but keeps the given order of nodes."""
         new_graph = Graph()
         ordered_polygons = sorted(polygons, key=list(self).index)
@@ -653,7 +653,7 @@ def split(*,  # noqa: C901, PLR0912, PLR0915
             plr_1 = graph.plr(polygon, splitter)
             pll_1 = graph.pll(polygon, splitter)
             pred_by_line = graph.pred_poly_by_line(polygon, edge)
-            a = graph.subgraph(pred_by_line)
+            a = graph.ordered_subgraph(pred_by_line)
             b = to_subgraph(predecessors=plr_1.predecessors - pred_by_line,
                             old_root=polygon,
                             new_root=plr_1.root,
@@ -670,7 +670,7 @@ def split(*,  # noqa: C901, PLR0912, PLR0915
                 if pivot_index == 0
                 else Segment(high_area_point, low_area_point))
         pred_by_line = graph.pred_poly_by_line(polygon, edge)
-        a = graph.subgraph(pred_by_line)
+        a = graph.ordered_subgraph(pred_by_line)
         b = to_subgraph(predecessors=plr_1.predecessors,
                         old_root=polygon,
                         new_root=plr_1.root | triangle,
@@ -853,7 +853,7 @@ def to_subgraph(*,
              old root is replaced by the new one and the `side`
              attributes of its edges are updated
     """
-    graph = graph.subgraph([old_root, *predecessors])
+    graph = graph.ordered_subgraph([old_root, *predecessors])
     for edge in graph.edges:
         if old_root in edge:
             neighbor = edge[1] if edge[0] == old_root else edge[0]
