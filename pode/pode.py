@@ -298,8 +298,8 @@ class Graph(_PolygonsDiGraph):
         for edge, side in chain(new_edges_and_sides,
                                 new_edges_and_sides_between_parts):
             new_graph.add_edge(*edge, side=side)
-        for *edge, side in self.edges.data("side"):
-            new_graph.add_edge(*edge, side=side)
+        for start, end, side in self.edges.data("side"):
+            new_graph.add_edge(start, end, side=side)
         if target is not None:
             intersection = second_connector_node & target
             if isinstance(intersection, Segment):
