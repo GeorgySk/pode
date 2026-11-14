@@ -784,9 +784,9 @@ def to_graph(polygon: Polygon,
         for part in parts:
             for side in edges(part.border):
                 parts_per_sides[side].add(part)
-        for side, parts in parts_per_sides.items():
-            if len(parts) > 1:  # shared by two parts
-                graph.add_edge(*parts, side=side)
+        for side, side_parts in parts_per_sides.items():
+            if len(side_parts) > 1:  # shared by two parts
+                graph.add_edge(*side_parts, side=side)
     else:
         pairs: Iterator[tuple[Polygon, Polygon]] = combinations(parts, 2)
         for part, other in pairs:
