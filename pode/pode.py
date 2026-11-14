@@ -161,7 +161,7 @@ class Graph(_PolygonsDiGraph):
 
     def neighbor_edges_vertices(self, polygon: Polygon) -> list[Point]:
         """Returns endpoints of the sides shared with the neighbors."""
-        vertices = []
+        vertices: list[Point] = []
         for edge in self._edges_with_neighbors(polygon):
             vertices.extend((edge.start, edge.end))
         return vertices
