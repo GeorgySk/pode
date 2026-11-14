@@ -719,7 +719,7 @@ def to_requirements_per_vertex(vertices: list[Point],
                                                      for site in sites}
     first_site = sites_per_locations[vertices[0]]
     yield frozenset({first_site})
-    accumulated_sites = frozenset()
+    accumulated_sites: frozenset[Requirement] = frozenset()
     for vertex in vertices[:-1]:
         site = sites_per_locations.get(vertex)
         if site is not None:
