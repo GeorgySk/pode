@@ -106,11 +106,11 @@ class Graph(_PolygonsDiGraph):
                           for start, end in graph.edges)
         ordered_graph.add_edges_from(directed_edges)
         side: Segment
-        for *edge, side in graph.edges.data("side"):
-            if edge in ordered_graph.edges:
-                ordered_graph.edges[edge]["side"] = side
+        for start, end, side in graph.edges.data("side"):
+            if (start, end) in ordered_graph.edges:
+                ordered_graph.edges[start, end]["side"] = side
             else:
-                ordered_graph.edges[edge[::-1]]["side"] = side
+                ordered_graph.edges[end, start]["side"] = side
         # there can't be more than one outcoming edges from a node
         for node in ordered_graph:
             if len(ordered_graph[node]) <= 1:
