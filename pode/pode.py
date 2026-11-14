@@ -230,7 +230,7 @@ class Graph(_PolygonsDiGraph):
         return self.plr(polygon, Segment(splitter.end, splitter.start))
 
     def prepend_two(self,
-                    parts: tuple[nx.DiGraph, nx.DiGraph],
+                    parts: tuple["nx.DiGraph[Polygon]", "nx.DiGraph[Polygon]"],
                     target: Polygon | None) -> "Graph":
         """
         Puts two parts of a split node before the remaining nodes.
@@ -262,7 +262,9 @@ class Graph(_PolygonsDiGraph):
         return new_graph
 
     def prepend_three(self,  # noqa: C901
-                      parts: tuple[nx.DiGraph, nx.DiGraph, nx.DiGraph],
+                      parts: tuple["nx.DiGraph[Polygon]",
+                                   "nx.DiGraph[Polygon]",
+                                   "nx.DiGraph[Polygon]"],
                       target: Polygon | None) -> "Graph":
         """
         Puts three parts of a split node before the remaining nodes.
@@ -534,8 +536,9 @@ def split(*,  # noqa: C901, PLR0912, PLR0915
           vertices: list[Point],
           sites: frozenset[Requirement],
           graph: Graph
-          ) -> (tuple[nx.DiGraph, nx.DiGraph]
-                | tuple[nx.DiGraph, nx.DiGraph, nx.DiGraph]):
+          ) -> (tuple["nx.DiGraph[Polygon]", "nx.DiGraph[Polygon]"]
+                | tuple["nx.DiGraph[Polygon]", "nx.DiGraph[Polygon]",
+                        "nx.DiGraph[Polygon]"]):
     """Splits a PredPoly to 2 or 3 parts for further division."""
     if polygon.border.orientation is not Orientation.COUNTERCLOCKWISE:
         raise ValueError("Polygon division is implemented only for polygons "
@@ -746,7 +749,7 @@ def normalize_areas(requirements: list[Scalar],
 def to_graph(polygon: Polygon,
              extra_points: list[Point],
              *,
-             convex_divisor: ConvexDivisorType) -> nx.Graph:
+             convex_divisor: ConvexDivisorType) -> "nx.Graph[Polygon]":
     """
     Converts polygon to a region-adjacency graph.
 
@@ -761,7 +764,7 @@ def to_graph(polygon: Polygon,
     :return: graph with parts of the polygon as nodes; edges will keep
              `side` attributes with the touching segments.
     """
-    graph = nx.Graph()
+    graph: nx.Graph[Polygon] = nx.Graph()
     polygon_border = polygon.border
     holes = polygon.holes
     site_points = extra_points

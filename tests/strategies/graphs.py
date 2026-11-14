@@ -11,7 +11,7 @@ from tests.strategies.geometry.composite import fraction_polygons_and_points
 
 
 def _to_graph(polygon_and_points: tuple[Polygon, list[Point]],
-              convex_divisor: ConvexDivisorType) -> nx.Graph:
+              convex_divisor: ConvexDivisorType) -> "nx.Graph[Polygon]":
     polygon, points = polygon_and_points
     return to_graph(polygon, points, convex_divisor=convex_divisor)
 
