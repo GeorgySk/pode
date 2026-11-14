@@ -1,16 +1,17 @@
 {
   "name": "pode",
-  "image": "python:3.14-bookworm",
+  "dockerComposeFile": ["../compose.yaml", "compose.devcontainer.yaml"],
+  "service": "pode",
+  "overrideCommand": true,
   "features": {
-    "ghcr.io/devcontainers/features/common-utils:2": {},
-    "ghcr.io/devcontainers-extra/features/poetry:2": {
-      "version": "2.3.1"
-    }
+    "ghcr.io/devcontainers/features/common-utils:2": {}
   },
   "workspaceFolder": "/opt/pode",
-  "workspaceMount": "source=${localWorkspaceFolder},target=/opt/pode,type=bind,consistency=cached",
-  "runArgs": ["--runtime=runc"],
-  "onCreateCommand": ". /opt/pode/.devcontainer/setup_user.sh",
-  "postCreateCommand": "poetry config virtualenvs.create false && poetry install --with dev --no-root",
-  "remoteUser": "${localEnv:USER}"
+  "onCreateCommand": "bash /opt/pode/.devcontainer/setup_user.sh",
+  "remoteUser": "vscode",
+  "customizations": {
+    "vscode": {
+      "extensions": ["charliermarsh.ruff"]
+    }
+  }
 }

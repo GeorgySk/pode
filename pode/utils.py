@@ -1,13 +1,12 @@
+"""Geometric helpers used by the decomposition algorithm."""
+
 import operator
+from collections.abc import (Iterator,
+                             Sequence)
 from fractions import Fraction
 from functools import (reduce,
                        singledispatch)
-from typing import (Iterator,
-                    List,
-                    Sequence,
-                    Tuple,
-                    TypeVar,
-                    Union)
+from typing import TypeVar
 
 from gon.base import (Contour,
                       EMPTY,
@@ -19,24 +18,28 @@ from gon.base import (Contour,
                       Segment,
                       Shaped,
                       Triangulation)
-from ground.base import (Context,
-                         get_context)
+from ground.base import Context
 
-GeometryType = TypeVar('GeometryType', bound=Geometry)
-T = TypeVar('T')
+from pode.hints import Scalar
+
+GeometryType = TypeVar("GeometryType", bound=Geometry)
+T = TypeVar("T")
+
+TRIANGLE_VERTICES_COUNT = 3
 
 
 def cut(contour: Contour,
         start: Point,
-        end: Point) -> List[Point]:
+        end: Point) -> list[Point]:
     """
-    Returns all points between the start point and the end point lying
-    on the counter including the endpoints themselves.
-    The points do not necessarily match with contour vertices.
+    Returns all points of the contour between the start and end points.
+
+    The endpoints themselves are included. The points do not necessarily
+    match with contour vertices.
     """
     if any(point not in contour for point in (start, end)):
-        raise ValueError(f"Both start point and end point should lie on "
-                         f"the contour")
+        raise ValueError("Both start point and end point should lie on "
+                         "the contour")
     vertices = [*contour.vertices, contour.vertices[0]]
     start_index = (vertices.index(start) if start in vertices
                    else next((index
@@ -54,20 +57,21 @@ def cut(contour: Contour,
         segment_to_end = Segment(vertices[start_index], end)
         if segment_to_start.length < segment_to_end.length:
             return [start, end]
-        else:
-            result = vertices[start_index + 1:-1] + vertices[:end_index + 1]
+        result = vertices[start_index + 1:-1] + vertices[:end_index + 1]
     head = [vertices[start_index]] if start in vertices else [start]
     tail = [] if end in vertices else [end]
     return head + result + tail
 
 
 def edges(contour: Contour) -> Iterator[Segment]:
+    """Yields the sides of the contour in the order of its vertices."""
     vertices = [*contour.vertices, contour.vertices[0]]
     yield from (Segment(vertices[index], vertices[index + 1])
                 for index in range(len(vertices) - 1))
 
 
-def shrink_collinear_vertices(contour: Contour) -> List[Point]:
+def shrink_collinear_vertices(contour: Contour) -> list[Point]:
+    """Returns the contour vertices except those collinear with neighbors."""
     vertices = list(contour.vertices)
     index = -len(vertices) + 1
     while index < 0:
@@ -91,6 +95,7 @@ def shrink_collinear_vertices(contour: Contour) -> List[Point]:
 
 @singledispatch
 def to_fractions(geometry: GeometryType) -> GeometryType:
+    """Converts coordinates of the geometry to fractions."""
     raise TypeError(f"Unsupported type: {type(geometry)}")
 
 
@@ -110,67 +115,67 @@ def _(geometry: Polygon) -> Polygon:
                    list(map(to_fractions, geometry.holes)))
 
 
-def unite(*geometries: Shaped) -> Union[Shaped, Empty]:
+def unite(*geometries: Shaped) -> Shaped | Empty:
+    """Returns the union of the geometries, or `EMPTY` if none given."""
     return reduce(operator.or_, geometries, EMPTY)
 
 
-def splitter_point(requirement: float,
+def splitter_point(requirement: Scalar,
                    pivot: Point,
                    low_area_point: Point,
                    high_area_point: Point) -> Point:
-    """Alternative to bisection search since we always have triangles"""
+    """Alternative to bisection search since we always have triangles."""
     if requirement <= 0:
         raise ValueError("Can't have a zero or negative requirement")
-    p = pivot
-    l = low_area_point
-    h = high_area_point
-    contour = Contour([p, l, h])
+    low = low_area_point
+    high = high_area_point
+    contour = Contour([pivot, low, high])
     triangle = Polygon(contour)
     if triangle.area < requirement:
         raise ValueError("Can't have a requirement greater than the area of "
                          "the triangle")
     r = requirement
-    dx = h.x - l.x
+    dx = high.x - low.x
     if dx == 0:
         if contour.orientation is Orientation.COUNTERCLOCKWISE:
-            a = (p.y - l.y) / (p.x - l.x)
-            b = (p.x * l.y - l.x * p.y - 2 * r) / (p.x - l.x)
-            x = l.x
-            y = a * l.x + b
+            a = (pivot.y - low.y) / (pivot.x - low.x)
+            b = (pivot.x * low.y - low.x * pivot.y - 2 * r) / (pivot.x - low.x)
+            x = low.x
+            y = a * low.x + b
             return Point(x, y)
-        else:
-            t = triangle.area - r
-            a = (p.y - h.y) / (p.x - h.x)
-            b = (p.x * h.y - h.x * p.y - 2 * t) / (p.x - h.x)
-            x = h.x
-            y = a * h.x + b
-            return Point(x, y)
-    k = (h.y - l.y) / dx
-    m = h.y - k * h.x
+        t = triangle.area - r
+        a = (pivot.y - high.y) / (pivot.x - high.x)
+        b = (pivot.x * high.y - high.x * pivot.y - 2 * t) / (pivot.x - high.x)
+        x = high.x
+        y = a * high.x + b
+        return Point(x, y)
+    k = (high.y - low.y) / dx
+    m = high.y - k * high.x
     if contour.orientation is Orientation.COUNTERCLOCKWISE:
-        dx = p.x - l.x
+        dx = pivot.x - low.x
         if dx == 0:
-            x = (2 * r + l.x * p.y - p.x * l.y) / (p.y - l.y)
+            x = (2 * r + low.x * pivot.y - pivot.x * low.y) / (pivot.y - low.y)
             y = k * x + m
             return Point(x, y)
-        a = (p.y - l.y) / dx
-        b = (p.x * l.y - l.x * p.y - 2 * r) / dx
+        a = (pivot.y - low.y) / dx
+        b = (pivot.x * low.y - low.x * pivot.y - 2 * r) / dx
     else:
         t = triangle.area - r
-        dx = p.x - h.x
+        dx = pivot.x - high.x
         if dx == 0:
-            x = (2 * t + h.x * p.y - p.x * h.y) / (p.y - h.y)
+            x = ((2 * t + high.x * pivot.y - pivot.x * high.y)
+                 / (pivot.y - high.y))
             y = k * x + m
             return Point(x, y)
-        a = (p.y - h.y) / dx
-        b = (p.x * h.y - h.x * p.y - 2 * t) / dx
+        a = (pivot.y - high.y) / dx
+        b = (pivot.x * high.y - high.x * pivot.y - 2 * t) / dx
     x = (m - b) / (a - k)
     y = a * x + b
     return Point(x, y)
 
 
 def orient(polygon: Polygon) -> Polygon:
-    """To counterclockwise. No holes"""
+    """To counterclockwise. No holes."""
     return Polygon(polygon.border.to_counterclockwise())
 
 
@@ -179,8 +184,8 @@ def joined_constrained_delaunay_triangles(
         *,
         extra_points: Sequence[Point] = (),
         extra_constraints: Sequence[Segment] = (),
-        context: Context) -> List[Contour]:
-    """Joins polygons to form convex parts of greater size"""
+        context: Context) -> list[Contour]:
+    """Joins polygons to form convex parts of greater size."""
     triangles = Triangulation.constrained_delaunay(
         polygon,
         extra_points=extra_points,
@@ -191,18 +196,18 @@ def joined_constrained_delaunay_triangles(
     result = []
     while True:
         resulting_polygon = initial_polygon
-        for index, polygon in enumerate(iter(polygons)):
-            polygon_sides = set(edges(polygon.border))
+        for index, part in enumerate(iter(polygons)):
+            part_sides = set(edges(part.border))
             common_side = next((edge
                                 for edge in edges(resulting_polygon.border)
-                                if edge in polygon_sides), None)
+                                if edge in part_sides), None)
             if common_side is None:
                 continue
             has_point_on_edge = any(point in common_side
                                     for point in extra_points)
             if has_point_on_edge:
                 continue
-            union_ = unite(resulting_polygon, polygon)
+            union_ = unite(resulting_polygon, part)
             if isinstance(union_, Polygon) and union_.is_convex:
                 polygons.pop(index)
                 resulting_polygon = union_
@@ -215,11 +220,17 @@ def joined_constrained_delaunay_triangles(
         initial_polygon = polygons.pop()
 
 
-def rotate(sequence: List[T], index: int) -> List[T]:
+def rotate(sequence: list[T], index: int) -> list[T]:
+    """Cyclically shifts the sequence to start from the given index."""
     return sequence[index:] + sequence[:index]
 
 
-def order_convex_contour_points(points: List[Point]) -> List[Point]:
+def order_convex_contour_points(points: list[Point]) -> list[Point]:
+    """
+    Orders points on the border of a convex polygon counterclockwise.
+
+    The lowest leftmost point goes first.
+    """
     lowest_leftmost_point_index = 0
     lowest_leftmost_point = points[lowest_leftmost_point_index]
     for index, point in enumerate(points[1:], start=1):
@@ -231,16 +242,16 @@ def order_convex_contour_points(points: List[Point]) -> List[Point]:
     points = (points[:lowest_leftmost_point_index]
               + points[lowest_leftmost_point_index + 1:])
 
-    def cotangent(point: Point) -> Union[Fraction, float]:
+    def cotangent(point: Point) -> Fraction | float:
         dx = point.x - lowest_leftmost_point.x
         dy = point.y - lowest_leftmost_point.y
         return (-dx / dy if dy
-                else (float('-inf') if dx > 0 else float('inf')))
+                else (float("-inf") if dx > 0 else float("inf")))
 
     cotangents_per_point = {point: cotangent(point) for point in points}
     max_tangent = max(cotangents_per_point.values())
 
-    def sorting_key(point: Point) -> Tuple[Union[Fraction, float], Fraction]:
+    def sorting_key(point: Point) -> tuple[Fraction | float, Fraction]:
         tangent = cotangents_per_point[point]
         distance = lowest_leftmost_point.distance_to(point)
         factor = -1 if tangent == max_tangent else 1

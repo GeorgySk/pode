@@ -1,0 +1,8 @@
+# Used by devcontainer.json on top of ../compose.yaml, so the dev container
+# runs the same image as `docker compose`, with versions from ../.env.
+services:
+  pode:
+    build:
+      # Always the dev stage, whatever IMAGE_TYPE says in .env.
+      target: dev
+    runtime: runc

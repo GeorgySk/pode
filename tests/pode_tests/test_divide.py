@@ -1,6 +1,3 @@
-from typing import (List,
-                    Tuple)
-
 from gon.base import Polygon
 from hypothesis import given
 
@@ -14,8 +11,8 @@ from tests.strategies.geometry.composite import polygons_and_requirements
 
 @given(polygon_and_requirements=polygons_and_requirements,
        convex_divisor=convex_divisors)
-def test_partitions(polygon_and_requirements: Tuple[Polygon,
-                                                    List[Requirement]],
+def test_partitions(polygon_and_requirements: tuple[Polygon,
+                                                    list[Requirement]],
                     convex_divisor: ConvexDivisorType) -> None:
     polygon, requirements = polygon_and_requirements
     division = divide(polygon, requirements, convex_divisor)

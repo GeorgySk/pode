@@ -1,18 +1,13 @@
 [tool.bumpversion]
-current_version = "0.4.6"
+commit = true
+# Tags need a commit; pushing a final vX.Y.Z tag triggers the CI publish jobs.
+tag = true
+tag_name = "v{new_version}"
+current_version = "0.4.7-alpha"
 parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)(\\-(?P<release>[a-z]+))?"
 serialize = [
     "{major}.{minor}.{patch}-{release}",
     "{major}.{minor}.{patch}"
-]
-commit = false
-tag = false
-
-[tool.bumpversion.parts.release]
-optional_value = "beta"
-values = [
-	"alpha",
-	"beta"
 ]
 
 [[tool.bumpversion.files]]
@@ -23,3 +18,18 @@ filename = "pode/__init__.py"
 
 [[tool.bumpversion.files]]
 filename = "pyproject.toml"
+
+# On release, turn the "Unreleased" section into a dated version section
+# and start a new empty "Unreleased" section above it.
+[[tool.bumpversion.files]]
+filename = "CHANGES.rst"
+search = "Unreleased\n----------"
+replace = "Unreleased\n----------\n\n{new_version} ({now:%Y-%m-%d})\n------------------------------"
+include_bumps = ["release"]
+
+[tool.bumpversion.parts.release]
+optional_value = "beta"
+values = [
+	"alpha",
+	"beta"
+]

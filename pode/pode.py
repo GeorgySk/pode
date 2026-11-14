@@ -1,20 +1,16 @@
+"""Polygon decomposition algorithm by Hert, S. and Lumelsky, V., 1998."""
+
 from collections import defaultdict
+from collections.abc import (Iterable,
+                             Iterator)
 from dataclasses import dataclass
 from fractions import Fraction
 from functools import cached_property
 from itertools import (chain,
                        combinations)
-from numbers import Real
-from typing import (DefaultDict,
-                    Dict,
-                    FrozenSet,
-                    Iterable,
-                    Iterator,
-                    List,
+from typing import (TYPE_CHECKING,
                     NamedTuple,
-                    Optional,
-                    Tuple,
-                    Union)
+                    cast)
 
 import networkx as nx
 from gon.base import (Contour,
@@ -30,8 +26,10 @@ from gon.base import (Contour,
 from gon.hints import Maybe
 from ground.base import get_context
 
-from pode.hints import ConvexDivisorType
-from pode.utils import (cut,
+from pode.hints import (ConvexDivisorType,
+                        Scalar)
+from pode.utils import (TRIANGLE_VERTICES_COUNT,
+                        cut,
                         edges,
                         order_convex_contour_points,
                         orient,
@@ -43,52 +41,80 @@ from pode.utils import (cut,
 
 
 class Requirement(NamedTuple):
-    """Area requirement with an optional point (site)"""
-    area: Real
-    point: Optional[Point] = None
+    """Area requirement with an optional point (site)."""
+    area: Scalar
+    point: Point | None = None
 
 
-class PolygonsSet(FrozenSet[Polygon]):
+class PolygonsSet(frozenset[Polygon]):
+    """Set of polygons with their total area."""
+
     @cached_property
     def area(self) -> Fraction:
-        return sum(polygon.area for polygon in self)
+        """Total area of the polygons."""
+        areas: Iterator[Fraction] = (polygon.area for polygon in self)
+        # `sum` of an empty set is the int 0, hence the conversion
+        return Fraction(sum(areas))
 
 
 @dataclass(frozen=True)
 class RootedPolygons:
+    """
+    Portion of a node together with the ancestors attached to it.
+
+    The root is the portion of the node, which can be `EMPTY`, and the
+    predecessors are the ancestors that go with it.
+    """
+
     root: Maybe[Polygon]
     predecessors: PolygonsSet
 
     @cached_property
     def area(self) -> Fraction:
+        """Total area of the root and the predecessors."""
         root_area = 0 if self.root is EMPTY else self.root.area
         return root_area + self.predecessors.area
 
 
-class Graph(nx.DiGraph):
-    def __init__(self, **attr) -> None:
-        super().__init__(**attr)
+# networkx classes are generic only in the stubs, at runtime they can't be
+# parametrized
+if TYPE_CHECKING:
+    _PolygonsDiGraph = nx.DiGraph[Polygon]
+else:
+    _PolygonsDiGraph = nx.DiGraph
+
+
+class Graph(_PolygonsDiGraph):
+    """
+    Directed graph of the convex parts of the polygon.
+
+    The nodes are ordered as they are processed, and each node has at
+    most one outgoing edge, to its next neighbor. Edges keep the shared
+    sides in the `side` attribute, and nodes keep the requirements
+    assigned to them in the `requirements` attribute.
+    """
 
     @classmethod
-    def from_undirected(cls, graph: nx.Graph) -> 'Graph':
-        """
-        Constructs an ordered and directed graph from an undirected
-        graph.
-        """
+    def from_undirected(cls, graph: "nx.Graph[Polygon]") -> "Graph":
+        """Constructs an ordered directed graph from an undirected one."""
         ordered_graph = cls()
         ordered_nodes = list(nx.dfs_postorder_nodes(graph))
         ordered_graph.add_nodes_from(ordered_nodes)
-        directed_edges = (sorted(edge, key=ordered_nodes.index)
-                          for edge in graph.edges)
+        directed_edges = ((start, end)
+                          if (ordered_nodes.index(start)
+                              < ordered_nodes.index(end))
+                          else (end, start)
+                          for start, end in graph.edges)
         ordered_graph.add_edges_from(directed_edges)
-        for *edge, side in graph.edges.data('side'):
-            if edge in ordered_graph.edges:
-                ordered_graph.edges[edge]['side'] = side
+        side: Segment
+        for start, end, side in graph.edges.data("side"):
+            if (start, end) in ordered_graph.edges:
+                ordered_graph.edges[start, end]["side"] = side
             else:
-                ordered_graph.edges[edge[::-1]]['side'] = side
+                ordered_graph.edges[end, start]["side"] = side
         # there can't be more than one outcoming edges from a node
         for node in ordered_graph:
-            if len(ordered_graph[node]) < 2:
+            if len(ordered_graph[node]) <= 1:
                 continue
             most_immediate_successor = cls.next_neighbor(ordered_graph,
                                                          node)
@@ -97,12 +123,12 @@ class Graph(nx.DiGraph):
             for neighbor in bad_edges_nodes:
                 ordered_graph.remove_edge(node, neighbor)
         for node in ordered_graph:
-            ordered_graph.nodes[node].update({'requirements': frozenset()})
+            ordered_graph.nodes[node].update({"requirements": frozenset()})
         return ordered_graph
 
-    def next_neighbor(self, polygon: Polygon) -> Optional[Polygon]:
+    def next_neighbor(self, polygon: Polygon) -> Polygon | None:
         """
-        Most immediate successor which is a neighbor of a given node
+        Most immediate successor which is a neighbor of a given node.
 
         :param polygon: node of the graph
         :return: next neighbor node or `None` if not found
@@ -112,6 +138,8 @@ class Graph(nx.DiGraph):
 
     def pred_polys(self, polygon: Polygon) -> PolygonsSet:
         """
+        Returns PredPoly of the given polygon.
+
         PredPoly is defined in the paper as the current polygon plus
         all its ancestors. In the paper ancestors are called
         "predecessors".
@@ -121,38 +149,33 @@ class Graph(nx.DiGraph):
         """
         return PolygonsSet({polygon, *nx.ancestors(self, polygon)})
 
-    def _edges_with_neighbors(self, polygon: Polygon) -> List[Segment]:
+    def _edges_with_neighbors(self, polygon: Polygon) -> list[Segment]:
         edges = []
         # neighbors() and successors() are the same in nx.DiGraph
         neighbors = chain(self.neighbors(polygon), self.predecessors(polygon))
         for neighbor in neighbors:
             try:
-                edges.append(self[polygon][neighbor]['side'])
+                edges.append(self[polygon][neighbor]["side"])
             except KeyError:
-                edges.append(self[neighbor][polygon]['side'])
+                edges.append(self[neighbor][polygon]["side"])
         return edges
 
-    def neighbor_edges_vertices(self, polygon: Polygon) -> List[Point]:
-        vertices = []
+    def neighbor_edges_vertices(self, polygon: Polygon) -> list[Point]:
+        """Returns endpoints of the sides shared with the neighbors."""
+        vertices: list[Point] = []
         for edge in self._edges_with_neighbors(polygon):
             vertices.extend((edge.start, edge.end))
         return vertices
 
     def _predecessors_by_edges(self,
-                               polygon: Polygon) -> Dict[Segment, Polygon]:
-        """
-        Mapping of the most immediate ancestors by the edges they
-        touch the given polygon
-        """
-        return {self[predecessor][polygon]['side']: predecessor
+                               polygon: Polygon) -> dict[Segment, Polygon]:
+        """Maps shared sides to the polygon's immediate ancestors."""
+        return {self[predecessor][polygon]["side"]: predecessor
                 for predecessor in self.predecessors(polygon)}
 
     def _pred_poly_by_edges(self,
-                            polygon: Polygon) -> Dict[Segment, PolygonsSet]:
-        """
-        Mapping of edges to ancestors that can be reached from the
-        given polygon
-        """
+                            polygon: Polygon) -> dict[Segment, PolygonsSet]:
+        """Maps shared sides to PredPolys of the immediate ancestors."""
         predecessors_by_edges = self._predecessors_by_edges(polygon)
         return {edge: self.pred_polys(predecessor)
                 for edge, predecessor in predecessors_by_edges.items()}
@@ -160,6 +183,12 @@ class Graph(nx.DiGraph):
     def pred_poly_by_line(self,
                           polygon: Polygon,
                           splitter: Segment) -> PolygonsSet:
+        """
+        Returns ancestors reachable through sides right of the splitter.
+
+        These are PredPolys of the immediate ancestors that touch the
+        polygon by the edges lying on the right of the splitter.
+        """
         pred_poly_by_edges = self._pred_poly_by_edges(polygon)
         vertices_in_interval = cut(polygon.border,
                                    splitter.start,
@@ -176,14 +205,16 @@ class Graph(nx.DiGraph):
             polygon: Polygon,
             splitter: Segment) -> RootedPolygons:
         """
-        Portion of the current polygon to the right of the splitter
-        plus all immediate ancestors accessible through the polygon
-        edges that lie on the right of the splitter
+        Returns the part of PredPoly to the right of the splitter.
+
+        It is the portion of the current polygon to the right of the
+        splitter plus all immediate ancestors accessible through the
+        polygon edges that lie on the right of the splitter.
         """
         vertices_in_interval = cut(polygon.border,
                                    splitter.start,
                                    splitter.end)
-        if len(vertices_in_interval) < 3:
+        if len(vertices_in_interval) < TRIANGLE_VERTICES_COUNT:
             current_polygon_part = EMPTY
         else:
             contour = Contour(shrink_collinear_vertices(
@@ -196,20 +227,30 @@ class Graph(nx.DiGraph):
     def pll(self,
             polygon: Polygon,
             splitter: Segment) -> RootedPolygons:
+        """Returns the part of PredPoly to the left of the splitter."""
         return self.plr(polygon, Segment(splitter.end, splitter.start))
 
     def prepend_two(self,
-                    parts: Tuple[nx.DiGraph, nx.DiGraph],
-                    target: Optional[Polygon]) -> 'Graph':
+                    parts: tuple["nx.DiGraph[Polygon]", "nx.DiGraph[Polygon]"],
+                    target: Polygon | None) -> "Graph":
+        """
+        Puts two parts of a split node before the remaining nodes.
+
+        Nodes of the parts that touch the target get connected to it.
+
+        :param parts: graphs of the parts the node was split into
+        :param target: next neighbor of the split node, if any
+        :return: new graph where the nodes of the parts go first
+        """
         new_graph = Graph()
         new_nodes = [node for part in parts for node in part]
-        new_edges_and_sides = [(edge, part.edges[edge]['side'])
+        new_edges_and_sides = [(edge, part.edges[edge]["side"])
                                for part in parts for edge in part.edges]
         new_graph.add_nodes_from(chain(new_nodes, self.nodes))
         for edge, side in new_edges_and_sides:
             new_graph.add_edge(*edge, side=side)
-        for *edge, side in self.edges.data('side'):
-            new_graph.add_edge(*edge, side=side)
+        for start, end, side in self.edges.data("side"):
+            new_graph.add_edge(start, end, side=side)
         if target is not None:
             for node in new_nodes:
                 intersection = node & target
@@ -221,12 +262,25 @@ class Graph(nx.DiGraph):
                 new_graph.nodes[node].update(graph.nodes[node])
         return new_graph
 
-    def prepend_three(self,
-                      parts: Tuple[nx.DiGraph, nx.DiGraph, nx.DiGraph],
-                      target: Optional[Polygon]) -> 'Graph':
+    def prepend_three(self,  # noqa: C901
+                      parts: tuple["nx.DiGraph[Polygon]",
+                                   "nx.DiGraph[Polygon]",
+                                   "nx.DiGraph[Polygon]"],
+                      target: Polygon | None) -> "Graph":
+        """
+        Puts three parts of a split node before the remaining nodes.
+
+        The parts get chained: the last node of the first part leads to
+        the nodes of the second part that touch it, those lead to the
+        last node of the third part, and that one leads to the target.
+
+        :param parts: graphs of the parts the node was split into
+        :param target: next neighbor of the split node, if any
+        :return: new graph where the nodes of the parts go first
+        """
         new_graph = Graph()
         new_nodes = [node for part in parts for node in part]
-        new_edges_and_sides = [(edge, part.edges[edge]['side'])
+        new_edges_and_sides = [(edge, part.edges[edge]["side"])
                                for part in parts for edge in part.edges]
         new_graph.add_nodes_from(chain(new_nodes, self.nodes))
         first_connector_node = list(parts[0])[-1]
@@ -245,8 +299,8 @@ class Graph(nx.DiGraph):
         for edge, side in chain(new_edges_and_sides,
                                 new_edges_and_sides_between_parts):
             new_graph.add_edge(*edge, side=side)
-        for *edge, side in self.edges.data('side'):
-            new_graph.add_edge(*edge, side=side)
+        for start, end, side in self.edges.data("side"):
+            new_graph.add_edge(start, end, side=side)
         if target is not None:
             intersection = second_connector_node & target
             if isinstance(intersection, Segment):
@@ -259,16 +313,14 @@ class Graph(nx.DiGraph):
                 new_graph.nodes[node].update(graph.nodes[node])
         return new_graph
 
-    def subgraph(self, polygons: Iterable[Polygon]) -> 'Graph':
-        """
-        Same as Graph.subgraph from NetworkX but preserves the order
-        of the nodes as in the given iterable.
-        """
+    def ordered_subgraph(self, polygons: Iterable[Polygon]) -> "Graph":
+        """Same as NetworkX's `subgraph` but keeps the given order of nodes."""
         new_graph = Graph()
         ordered_polygons = sorted(polygons, key=list(self).index)
         new_graph.add_nodes_from(ordered_polygons)
         polygons = set(ordered_polygons)
-        for *edge, side in self.edges.data('side'):
+        side: Segment
+        for *edge, side in self.edges.data("side"):
             if all(polygon in polygons for polygon in edge):
                 new_graph.add_edge(*edge, side=side)
         # Copying attributes containing requirements per node
@@ -277,13 +329,13 @@ class Graph(nx.DiGraph):
         return new_graph
 
 
-def divide(polygon: Polygon,
-           requirements: List[Requirement],
+def divide(polygon: Polygon,  # noqa: C901, PLR0912, PLR0915
+           requirements: list[Requirement],
            convex_divisor: ConvexDivisorType
            = Triangulation.constrained_delaunay
-           ) -> List[Polygon]:
+           ) -> list[Polygon]:
     """
-    Divides given polygon for the given list of `Requirement` objects
+    Divides given polygon for the given list of `Requirement` objects.
 
     :param polygon: input polygon
     :param requirements: area requirements with optional points
@@ -305,11 +357,11 @@ def divide(polygon: Polygon,
     requirements = [requirement._replace(area=area)
                     for requirement, area in zip(requirements,
                                                  normalized_areas)]
-    resulting_parts: List[Optional[Polygon]] = [None] * len(requirements)
+    resulting_parts: list[Polygon | None] = [None] * len(requirements)
     reference_requirements = requirements.copy()
-    pseudo_to_original_requirements: Dict[Requirement, Requirement] = {}
-    incomplete_parts: DefaultDict[Requirement,
-                                  List[Polygon]] = defaultdict(list)
+    pseudo_to_original_requirements: dict[Requirement, Requirement] = {}
+    incomplete_parts: defaultdict[Requirement,
+                                  list[Polygon]] = defaultdict(list)
     site_points = [requirement.point for requirement in requirements
                    if requirement.point is not None]
     graph = to_graph(polygon,
@@ -329,8 +381,8 @@ def divide(polygon: Polygon,
         required_area = sum(requirement.area for requirement in current_sites)
         if len(current_sites) == 1 and pred_polys.area < required_area:
             neighbor = graph.next_neighbor(current_polygon)
-            edge = graph[current_polygon][neighbor]['side']
-            requirement = list(current_sites)[0]
+            edge = graph[current_polygon][neighbor]["side"]
+            requirement = next(iter(current_sites))
             pseudorequirement = Requirement(requirement.area - pred_polys.area,
                                             point=edge.centroid)
             pred_poly = unite(*pred_polys)
@@ -340,9 +392,9 @@ def divide(polygon: Polygon,
             graph.remove_nodes_from(pred_polys)
             pseudo_to_original_requirements[
                 pseudorequirement] = original_requirement
-            graph.nodes[neighbor]['requirements'] |= {pseudorequirement}
+            graph.nodes[neighbor]["requirements"] |= {pseudorequirement}
         elif len(current_sites) == 1 and pred_polys.area == required_area:
-            requirement = list(current_sites)[0]
+            requirement = next(iter(current_sites))
             graph.remove_nodes_from(pred_polys)
             if requirement not in pseudo_to_original_requirements:
                 resulting_part = unite(*pred_polys)
@@ -371,9 +423,9 @@ def divide(polygon: Polygon,
                                  *extra_points})
                 if current_sites:
                     vertices = order_by_sites(vertices,
-                                              list(current_sites)[0].point)
+                                              next(iter(current_sites)).point)
             else:
-                edge = graph[current_polygon][neighbor]['side']
+                edge = graph[current_polygon][neighbor]["side"]
                 vertices = list({*current_polygon.border.vertices,
                                  *extra_points,
                                  *(site.point for site in current_sites),
@@ -385,14 +437,25 @@ def divide(polygon: Polygon,
                           sites=current_sites,
                           graph=graph)
             graph.remove_nodes_from(pred_polys)
-            graph = (graph.prepend_two(parts, neighbor) if len(parts) == 2
-                     else graph.prepend_three(parts, neighbor))
+            match parts:
+                case (_, _):
+                    graph = graph.prepend_two(parts, neighbor)
+                case (_, _, _):
+                    graph = graph.prepend_three(parts, neighbor)
         remaining_nodes = iter(graph.nodes)
     return resulting_parts
 
 
-def validate_requirements(requirements: List[Requirement],
+def validate_requirements(requirements: list[Requirement],
                           polygon: Polygon) -> None:
+    """
+    Checks that the requirements can be met for the polygon.
+
+    :param requirements: area requirements with optional sites
+    :param polygon: polygon that will be divided
+    :raises ValueError: if the areas don't sum up to 1, if a site lies
+                        outside the polygon, or if two sites coincide
+    """
     if sum(requirement.area for requirement in requirements) != 1:
         raise ValueError("Area requirements should sum up to 1.")
     sites = [requirement.point for requirement in requirements
@@ -406,13 +469,29 @@ def validate_requirements(requirements: List[Requirement],
 
 def assign_requirements(*,
                         polygon: Polygon,
-                        requirements: List[Requirement],
-                        graph: Graph) -> Tuple[FrozenSet[Requirement],
-                                               List[Requirement]]:
+                        requirements: list[Requirement],
+                        graph: Graph) -> tuple[frozenset[Requirement],
+                                               list[Requirement]]:
+    """
+    Chooses the requirements to be met by the given node of the graph.
+
+    The node takes its preassigned requirements and the requirements
+    whose sites lie in it and in none of the nodes processed after its
+    PredPoly. If there are none, it takes one requirement whose site
+    lies in it. If no nodes are left after its PredPoly, it takes all
+    the requirements with sites. If no requirement has a site, the last
+    one gets anchored at the first vertex of the polygon.
+
+    :param polygon: current node of the graph
+    :param requirements: requirements that are not assigned yet
+    :param graph: graph of the polygon parts that are left to process
+    :return: requirements assigned to the node and the requirements
+             left for the other nodes
+    """
     requirements_with_points = {requirement for requirement in requirements
                                 if requirement.point is not None}
     preassigned_requirements_with_points = {
-        site for node in graph for site in graph.nodes[node]['requirements']}
+        site for node in graph for site in graph.nodes[node]["requirements"]}
     if (not requirements_with_points
             and not preassigned_requirements_with_points):
         bare_requirements = [requirement for requirement in requirements
@@ -423,7 +502,7 @@ def assign_requirements(*,
         point = polygon.border.vertices[0]
         requirement = Requirement(requirement.area, point=point)
         return frozenset({requirement}), requirements
-    current_preassigned_requirements = graph.nodes[polygon]['requirements']
+    current_preassigned_requirements = graph.nodes[polygon]["requirements"]
     ancestors = nx.ancestors(graph, polygon)
     remaining_nodes = set(graph.nodes) - {polygon, *ancestors}
     if not remaining_nodes:
@@ -454,18 +533,19 @@ def assign_requirements(*,
     return frozenset([current_requirement]), leftover_requirements
 
 
-def split(*,
+def split(*,  # noqa: C901, PLR0912, PLR0915
           polygon: Polygon,
-          vertices: List[Point],
-          sites: FrozenSet[Requirement],
+          vertices: list[Point],
+          sites: frozenset[Requirement],
           graph: Graph
-          ) -> Union[Tuple[nx.DiGraph, nx.DiGraph],
-                     Tuple[nx.DiGraph, nx.DiGraph, nx.DiGraph]]:
-    """Splits a PredPoly to 2 or 3 parts for further division"""
+          ) -> (tuple["nx.DiGraph[Polygon]", "nx.DiGraph[Polygon]"]
+                | tuple["nx.DiGraph[Polygon]", "nx.DiGraph[Polygon]",
+                        "nx.DiGraph[Polygon]"]):
+    """Splits a PredPoly to 2 or 3 parts for further division."""
     if polygon.border.orientation is not Orientation.COUNTERCLOCKWISE:
         raise ValueError("Polygon division is implemented only for polygons "
                          "oriented counter-clockwise")
-    sites_locations = set(site.point for site in sites)
+    sites_locations = {site.point for site in sites}
     first_site_index, first_site_point = next(
         ((index, vertex) for index, vertex in enumerate(vertices[1:], start=1)
          if vertex in sites_locations), (0, vertices[0]))
@@ -476,13 +556,13 @@ def split(*,
     heads = vertices[first_head_index:]
     if len(sites) == 1:
         sites_per_vertex = [sites] * len(vertices)
-        requirements = [list(sites)[0].area] * len(vertices)
+        requirements = [next(iter(sites)).area] * len(vertices)
     else:
         sites_per_vertex = list(to_requirements_per_vertex(heads, sites))
         requirements = [sum(site.area for site in sites_)
                         for sites_ in sites_per_vertex]
-    for (plr, head_index,
-         requirement, right_sites) in zip(plrs, head_indices,
+    for (plr, head_index,  # noqa: B007
+         requirement, right_sites) in zip(plrs, head_indices,  # noqa: B007
                                           requirements, sites_per_vertex):
         if plr.area >= requirement:
             break
@@ -493,7 +573,8 @@ def split(*,
             origins = vertices[first_site_index - 1::-1]
             plrs = [graph.plr(polygon, Segment(origin, first_site_point))
                     for origin in origins]
-            for plr, origin_index in zip(plrs, origins_indices):
+            for plr, origin_index in zip(  # noqa: B007
+                    plrs, origins_indices):
                 if plr.area >= requirement:
                     break
             pivot_index = head_index
@@ -557,89 +638,89 @@ def split(*,
                             sites=sites - right_sites,
                             graph=graph)
             return a, b
-        else:
-            ps = Multipoint([low_area_point, high_area_point]).centroid
-            if (Vector(low_area_point, pivot_point).orientation_of(ps)
-                    is Orientation.COLLINEAR):
-                index = pivot_index
-                while True:
-                    index -= 1
-                    temp_point = vertices[index]
-                    if Vector(low_area_point, pivot_point).orientation_of(
-                            temp_point) is not Orientation.COLLINEAR:
-                        new_splitter_tail = Multipoint(
-                            [temp_point, vertices[index + 1]]).centroid
-                        break
-                new_splitter_head = edge.centroid
-                splitter = Segment(new_splitter_tail, new_splitter_head)
-                plr_1 = graph.plr(polygon, splitter)
-                pll_1 = graph.pll(polygon, splitter)
-                pred_by_line = graph.pred_poly_by_line(polygon, edge)
-                a = graph.subgraph(pred_by_line)
-                b = to_subgraph(predecessors=plr_1.predecessors - pred_by_line,
-                                old_root=polygon,
-                                new_root=plr_1.root,
-                                sites=right_sites,
-                                graph=graph)
-                c = to_subgraph(predecessors=pll_1.predecessors - pred_by_line,
-                                old_root=polygon,
-                                new_root=pll_1.root,
-                                sites=sites - right_sites,
-                                graph=graph)
-                return b, a, c
-            triangle = Polygon(Contour([low_area_point, ps, pivot_point]))
-            edge = (Segment(low_area_point, high_area_point)
-                    if pivot_index == 0
-                    else Segment(high_area_point, low_area_point))
+        ps = Multipoint([low_area_point, high_area_point]).centroid
+        if (Vector(low_area_point, pivot_point).orientation_of(ps)
+                is Orientation.COLLINEAR):
+            index = pivot_index
+            while True:
+                index -= 1
+                temp_point = vertices[index]
+                if Vector(low_area_point, pivot_point).orientation_of(
+                        temp_point) is not Orientation.COLLINEAR:
+                    new_splitter_tail = Multipoint(
+                        [temp_point, vertices[index + 1]]).centroid
+                    break
+            new_splitter_head = edge.centroid
+            splitter = Segment(new_splitter_tail, new_splitter_head)
+            plr_1 = graph.plr(polygon, splitter)
+            pll_1 = graph.pll(polygon, splitter)
             pred_by_line = graph.pred_poly_by_line(polygon, edge)
-            a = graph.subgraph(pred_by_line)
-            b = to_subgraph(predecessors=plr_1.predecessors,
+            a = graph.ordered_subgraph(pred_by_line)
+            b = to_subgraph(predecessors=plr_1.predecessors - pred_by_line,
                             old_root=polygon,
-                            new_root=plr_1.root | triangle,
+                            new_root=plr_1.root,
                             sites=right_sites,
                             graph=graph)
             c = to_subgraph(predecessors=pll_1.predecessors - pred_by_line,
                             old_root=polygon,
-                            new_root=pll_1.root - triangle,
+                            new_root=pll_1.root,
                             sites=sites - right_sites,
                             graph=graph)
             return b, a, c
-    else:
-        t = Multipoint([vertices[-1], vertices[0]]).centroid
-        splitter = Segment(t, first_site_point)
-        plr_1 = graph.plr(polygon, splitter)
-        pll_1 = graph.pll(polygon, splitter)
-        first_site_set = sites_per_vertex[0]
-        a = to_subgraph(predecessors=plr_1.predecessors,
+        triangle = Polygon(Contour([low_area_point, ps, pivot_point]))
+        edge = (Segment(low_area_point, high_area_point)
+                if pivot_index == 0
+                else Segment(high_area_point, low_area_point))
+        pred_by_line = graph.pred_poly_by_line(polygon, edge)
+        a = graph.ordered_subgraph(pred_by_line)
+        b = to_subgraph(predecessors=plr_1.predecessors,
                         old_root=polygon,
-                        new_root=plr_1.root,
-                        sites=first_site_set,
+                        new_root=plr_1.root | triangle,
+                        sites=right_sites,
                         graph=graph)
-        b = to_subgraph(predecessors=pll_1.predecessors,
+        c = to_subgraph(predecessors=pll_1.predecessors - pred_by_line,
                         old_root=polygon,
-                        new_root=pll_1.root,
-                        sites=sites - first_site_set,
+                        new_root=pll_1.root - triangle,
+                        sites=sites - right_sites,
                         graph=graph)
-        return b, a
+        return b, a, c
+    t = Multipoint([vertices[-1], vertices[0]]).centroid
+    splitter = Segment(t, first_site_point)
+    plr_1 = graph.plr(polygon, splitter)
+    pll_1 = graph.pll(polygon, splitter)
+    first_site_set = sites_per_vertex[0]
+    a = to_subgraph(predecessors=plr_1.predecessors,
+                    old_root=polygon,
+                    new_root=plr_1.root,
+                    sites=first_site_set,
+                    graph=graph)
+    b = to_subgraph(predecessors=pll_1.predecessors,
+                    old_root=polygon,
+                    new_root=pll_1.root,
+                    sites=sites - first_site_set,
+                    graph=graph)
+    return b, a
 
 
-def to_requirements_per_vertex(vertices: List[Point],
-                               sites: FrozenSet[Requirement]
-                               ) -> Iterator[FrozenSet[Requirement]]:
+def to_requirements_per_vertex(vertices: list[Point],
+                               sites: frozenset[Requirement]
+                               ) -> Iterator[frozenset[Requirement]]:
     """
-    When rotating a line head over `domain_vertices`
-    we need to get on each step a list of all previously encountered
-    sites, so that later we can extract corresponding area requirement.
+    Yields the sites encountered so far for each vertex.
+
+    When rotating a line head over `vertices` we need to get on each
+    step a list of all previously encountered sites, so that later we
+    can extract corresponding area requirement.
     """
     if not sites:
-        return ValueError(f"No sites given")
+        raise ValueError("No sites given")
     if vertices[0] not in {site.point for site in sites}:
-        raise ValueError(f"The first vertex should be a site")
-    sites_per_locations: Dict[Point, Requirement] = {site.point: site
+        raise ValueError("The first vertex should be a site")
+    sites_per_locations: dict[Point, Requirement] = {site.point: site
                                                      for site in sites}
     first_site = sites_per_locations[vertices[0]]
     yield frozenset({first_site})
-    accumulated_sites = frozenset()
+    accumulated_sites: frozenset[Requirement] = frozenset()
     for vertex in vertices[:-1]:
         site = sites_per_locations.get(vertex)
         if site is not None:
@@ -647,24 +728,33 @@ def to_requirements_per_vertex(vertices: List[Point],
         yield accumulated_sites
 
 
-def normalize_areas(requirements: List[Real],
-                    polygon_area: Fraction) -> List[Fraction]:
-    *requirements, last_requirement = requirements
-    requirements = [Fraction(requirement) * polygon_area
-                    for requirement in requirements]
-    last_requirement = polygon_area - sum(requirements)
-    requirements.append(last_requirement)
-    return requirements
+def normalize_areas(requirements: list[Scalar],
+                    polygon_area: Fraction) -> list[Fraction]:
+    """
+    Converts area fractions to absolute areas of the polygon.
+
+    The last area is the remainder, so the areas sum up to exactly the
+    polygon area.
+
+    :param requirements: fractions of the polygon area
+    :param polygon_area: area of the polygon
+    :return: absolute areas
+    """
+    areas = [Fraction(requirement) * polygon_area
+             for requirement in requirements[:-1]]
+    areas.append(polygon_area - sum(areas))
+    return areas
 
 
 def to_graph(polygon: Polygon,
-             extra_points: List[Point],
+             extra_points: list[Point],
              *,
-             convex_divisor: ConvexDivisorType) -> nx.Graph:
+             convex_divisor: ConvexDivisorType) -> "nx.Graph[Polygon]":
     """
-    Converts polygon to a region-adjacency graph by dividing it to
-    parts using `convex_divisor` function. Resulting parts become nodes
-    connected when they touch each other.
+    Converts polygon to a region-adjacency graph.
+
+    The polygon is divided to parts using `convex_divisor` function.
+    Resulting parts become nodes connected when they touch each other.
 
     :param polygon: input polygon that will be split
     :param extra_points: list of points which will be used in splitting
@@ -674,7 +764,7 @@ def to_graph(polygon: Polygon,
     :return: graph with parts of the polygon as nodes; edges will keep
              `side` attributes with the touching segments.
     """
-    graph = nx.Graph()
+    graph: nx.Graph[Polygon] = nx.Graph()
     polygon_border = polygon.border
     holes = polygon.holes
     site_points = extra_points
@@ -690,29 +780,29 @@ def to_graph(polygon: Polygon,
     parts = list(map(Polygon, parts))
     if len(parts) == 1:
         graph.add_nodes_from(parts)
+    elif convex_divisor is Triangulation.constrained_delaunay:
+        parts_per_sides = defaultdict(set)
+        for part in parts:
+            for side in edges(part.border):
+                parts_per_sides[side].add(part)
+        for side, side_parts in parts_per_sides.items():
+            if len(side_parts) > 1:  # shared by two parts
+                graph.add_edge(*side_parts, side=side)
     else:
-        if convex_divisor is Triangulation.constrained_delaunay:
-            parts_per_sides = defaultdict(set)
-            for part in parts:
-                for side in edges(part.border):
-                    parts_per_sides[side].add(part)
-            for side, parts in parts_per_sides.items():
-                if len(parts) == 2:
-                    graph.add_edge(*parts, side=side)
-        else:
-            pairs: Iterator[Tuple[Polygon, Polygon]] = combinations(parts, 2)
-            for part, other in pairs:
-                intersection = part & other
-                if isinstance(intersection, Segment):
-                    graph.add_edge(part, other, side=intersection)
+        pairs: Iterator[tuple[Polygon, Polygon]] = combinations(parts, 2)
+        for part, other in pairs:
+            intersection = part & other
+            if isinstance(intersection, Segment):
+                graph.add_edge(part, other, side=intersection)
     return graph
 
 
-def order_by_sites(vertices: List[Point],
-                   site_location: Point) -> List[Point]:
+def order_by_sites(vertices: list[Point],
+                   site_location: Point) -> list[Point]:
     """
-    Orders vertices of the convex polygon and the sites in a
-    counterclockwise manner so that the last vertex would be a site.
+    Orders vertices of the convex polygon and the sites counterclockwise.
+
+    The given site becomes the last vertex.
 
     :param vertices: convex polygon's vertices and sites
     :param site_location: site that will be the last vertex
@@ -724,12 +814,12 @@ def order_by_sites(vertices: List[Point],
     return rotate(ordered_vertices, site_index + 1)
 
 
-def order_by_edge(vertices: List[Point],
-                  edge: Segment) -> List[Point]:
+def order_by_edge(vertices: list[Point],
+                  edge: Segment) -> list[Point]:
     """
-    Orders vertices of the convex polygon and the sites in a
-    counterclockwise manner so that the last edge would be the edge to
-    the next neighbor.
+    Orders vertices of the convex polygon and the sites counterclockwise.
+
+    The last edge becomes the edge to the next neighbor.
 
     :param vertices: vertices of the convex polygon and the sites
                      located on the boundary of the polygon
@@ -746,16 +836,30 @@ def order_by_edge(vertices: List[Point],
 
 
 def to_subgraph(*,
-                predecessors: PolygonsSet,
+                predecessors: Iterable[Polygon],
                 old_root: Polygon,
                 new_root: Polygon,
-                sites: FrozenSet[Requirement],
+                sites: frozenset[Requirement],
                 graph: Graph) -> Graph:
-    graph = graph.subgraph([old_root, *predecessors])
+    """
+    Makes a graph of a part that remains after splitting a node.
+
+    :param predecessors: ancestors of the old root that go to the part
+    :param old_root: node that was split
+    :param new_root: piece of the old root that goes to the part
+    :param sites: requirements assigned to the new root
+    :param graph: graph that contains the old root and its ancestors
+    :return: subgraph of the old root and the predecessors, where the
+             old root is replaced by the new one and the `side`
+             attributes of its edges are updated
+    """
+    graph = graph.ordered_subgraph([old_root, *predecessors])
     for edge in graph.edges:
         if old_root in edge:
             neighbor = edge[1] if edge[0] == old_root else edge[0]
-            graph.edges[edge]['side'] = new_root & neighbor
-    graph = nx.relabel_nodes(graph, {old_root: new_root})
-    graph.nodes[new_root]['requirements'] = sites
+            graph.edges[edge]["side"] = new_root & neighbor
+    # the stubs lose the subclass, but with the default `copy=True`
+    # `relabel_nodes` builds the result with `graph.__class__()`
+    graph = cast("Graph", nx.relabel_nodes(graph, {old_root: new_root}))
+    graph.nodes[new_root]["requirements"] = sites
     return graph

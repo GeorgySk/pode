@@ -1,9 +1,8 @@
 import math
+from collections.abc import Callable
 from fractions import Fraction
 from math import floor
-from numbers import Real
-from typing import (List,
-                    TypeVar)
+from typing import TypeVar
 
 from gon.base import (Multipoint,
                       Polygon,
@@ -17,9 +16,10 @@ from tests.pode_tests.config import (MAX_CONTOUR_SIZE,
                                      MIN_CONTOUR_SIZE,
                                      MIN_COORDINATE,
                                      MIN_HOLES_SIZE)
+from pode.hints import Scalar
 from pode.utils import joined_constrained_delaunay_triangles
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 TRIANGULAR_CONTOUR_SIZE = 3
 RECTANGLE_CONTOUR_SIZE = 4
@@ -33,27 +33,33 @@ fraction_triangles = planar.polygons(fractions,
 convex_divisors = st.sampled_from([Triangulation.constrained_delaunay,
                                    joined_constrained_delaunay_triangles])
 
-coordinates_strategies_factories = {int: st.integers,
-                                    Fraction: st.fractions,
-                                    float: st.floats}
+# each factory takes bounds of its own type, which a `dict` type can't express
+coordinates_strategies_factories: dict[
+    type[Scalar], Callable[..., st.SearchStrategy[Scalar]]
+] = {int: st.integers,
+     Fraction: st.fractions,
+     float: st.floats}
 coordinates_strategies = st.sampled_from([
     factory(MIN_COORDINATE, MAX_COORDINATE)
     for factory in coordinates_strategies_factories.values()])
 
 
-def coordinates_to_polygons(coordinates: st.SearchStrategy[Real]
+def coordinates_to_polygons(coordinates: st.SearchStrategy[Scalar]
                             ) -> st.SearchStrategy[Polygon]:
-    return planar.polygons(
+    strategy: st.SearchStrategy[Polygon] = planar.polygons(
         coordinates,
         min_size=MIN_CONTOUR_SIZE,
         max_size=MAX_CONTOUR_SIZE,
         min_holes_size=MIN_HOLES_SIZE,
         max_holes_size=MAX_HOLES_SIZE)
+    return strategy
 
 
-def coordinates_to_multipoints(coordinates: st.SearchStrategy[Real]
+def coordinates_to_multipoints(coordinates: st.SearchStrategy[Scalar]
                                ) -> st.SearchStrategy[Multipoint]:
-    return planar.multipoints(coordinates, min_size=1)
+    strategy: st.SearchStrategy[Multipoint] = planar.multipoints(
+        coordinates, min_size=1)
+    return strategy
 
 
 polygons = coordinates_strategies.flatmap(coordinates_to_polygons)
@@ -61,32 +67,38 @@ fractions_polygons = coordinates_to_polygons(fractions)
 multipoints = coordinates_strategies.flatmap(coordinates_to_multipoints)
 
 
-def requirements(sum_: Real,
+def requirements(sum_: Scalar,  # noqa: C901
                  *,
-                 min_value: Real = 0,
+                 min_value: Scalar = 0,
                  size: int = MIN_PARTITION_SIZE,
-                 base: st.SearchStrategy[Real] = st.integers()
-                 ) -> st.SearchStrategy[List[Real]]:
+                 base: st.SearchStrategy[Scalar] | None = None
+                 ) -> st.SearchStrategy[list[Scalar]]:
+    if base is None:
+        base = st.integers()
     if size < MIN_PARTITION_SIZE:
-        raise ValueError('`size` should not be less '
-                         f'than {MIN_PARTITION_SIZE}.')
+        raise ValueError("`size` should not be less "
+                         f"than {MIN_PARTITION_SIZE}.")
     if not (0 <= min_value <= sum_):
-        raise ValueError(f'`min_value` should be in [0, {sum_}] interval.')
+        raise ValueError(f"`min_value` should be in [0, {sum_}] interval.")
     if min_value:
         max_size_approximation = sum_ / min_value
         if math.isfinite(max_size_approximation):
             max_size = floor(max_size_approximation)
             if max_size < size:
-                raise ValueError(f'`size` should not be greater than {max_size}.')
+                raise ValueError(
+                    f"`size` should not be greater than {max_size}.")
 
-    def to_proportions(numbers: List[Real]) -> List[Real]:
-        return [2 * abs(number) / (1 + number * number) for number in numbers]
+    def to_proportions(numbers: list[Scalar]) -> list[Scalar]:
+        # `max(number, -number)` is `abs(number)`, but unlike `abs` mypy can
+        # infer its type for a union of number types.
+        return [2 * max(number, -number) / (1 + number * number)
+                for number in numbers]
 
-    def to_partition(proportions: List[Real]) -> List[Real]:
+    def to_partition(proportions: list[Scalar]) -> list[Scalar]:
         factor = sum_ / sum(proportions)
         return [proportion * factor for proportion in proportions]
 
-    def bound_minimum(partition: List[Real]) -> List[Real]:
+    def bound_minimum(partition: list[Scalar]) -> list[Scalar]:
         minimum = min(partition)
         if minimum >= min_value:
             return partition
@@ -97,7 +109,7 @@ def requirements(sum_: Real,
         return [max((part * slope + intercept) / denominator, min_value)
                 for part in partition]
 
-    def normalize(partition: List[Real]) -> List[Real]:
+    def normalize(partition: list[Scalar]) -> list[Scalar]:
         partition_sum = sum(partition)
         if partition_sum < sum_:
             arg_min = min(range(len(partition)),
@@ -109,7 +121,7 @@ def requirements(sum_: Real,
             partition[arg_max] -= partition_sum - sum_
         return partition
 
-    def is_valid(partition: List[Real]) -> bool:
+    def is_valid(partition: list[Scalar]) -> bool:
         return sum(partition) == sum_
 
     return (st.lists(base,
