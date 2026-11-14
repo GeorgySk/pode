@@ -16,7 +16,7 @@ def test_subset(graph: Graph,
     other_index = other_index % len(nodes)
     subset = (nodes[index:other_index] if index < other_index
               else nodes[other_index:index])
-    subgraph = graph.subgraph(subset)
+    subgraph = graph.ordered_subgraph(subset)
     edges = set(graph.edges)
     assert all(node in graph for node in subgraph)
     assert all(edge in edges for edge in subgraph.edges)

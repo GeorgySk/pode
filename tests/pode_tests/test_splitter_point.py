@@ -7,7 +7,7 @@ from hypothesis import (assume,
                         given,
                         strategies as st)
 
-from pode.pode import splitter_point
+from pode.utils import splitter_point
 from tests.strategies.geometry.base import fraction_triangles
 
 

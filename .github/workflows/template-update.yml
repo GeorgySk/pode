@@ -1,0 +1,85 @@
+# Opens a pull request when the template this project was generated from
+# (see .copier-answers.yml) has a new release. Without a
+# TEMPLATE_UPDATE_TOKEN secret, the pull request doesn't trigger CI and
+# updates that change files in .github/workflows can't be pushed: see the
+# README ("Updating from the template").
+name: Template update
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"  # Mondays at 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  COPIER_VERSION: "9.19.1"
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.TEMPLATE_UPDATE_TOKEN || github.token }}
+      - name: Install Copier
+        run: pipx install "copier==${COPIER_VERSION}"
+      - name: Set git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      # Copier updates to the latest final release (vX.Y.Z), skipping
+      # pre-releases, and writes conflicts as inline markers.
+      - name: Update from the template
+        run: copier update --defaults --conflict inline
+      - name: Open a pull request
+        env:
+          GH_TOKEN: ${{ secrets.TEMPLATE_UPDATE_TOKEN || github.token }}
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "Already up to date with the template."
+            exit 0
+          fi
+          version="$(sed -n 's/^_commit: //p' .copier-answers.yml)"
+          source="$(sed -n 's/^_src_path: //p' .copier-answers.yml)"
+          branch="template-update/${version}"
+          # One pull request per release: an open one may hold conflict
+          # fixes, and a closed one means the release was declined.
+          existing="$(gh pr list --head "${branch}" --state all --json number --jq length)"
+          if [ "${existing}" != "0" ]; then
+            echo "A pull request for ${branch} already exists."
+            exit 0
+          fi
+
+          git switch --quiet --create "${branch}"
+          git add --all
+          conflicts="$(
+            git diff --cached --name-only -z --diff-filter=AM \
+              | xargs -0 -r grep -l -E '^(<{7}|>{7})( |$)' || true
+            git diff --cached --name-only -- '*.rej'
+          )"
+          git commit --quiet --message "Update template to ${version}"
+          git push --quiet origin "${branch}"
+
+          draft=()
+          {
+            echo "Updates the project to ${version} of the template (\`${source}\`)."
+            echo "See the template's \`CHANGES.rst\` for what changed."
+            if [ -n "${conflicts}" ]; then
+              draft=(--draft)
+              echo
+              echo "**Conflicts:** the template and this project both changed these files."
+              echo "Resolve the conflict markers, push to this branch and mark the pull request as ready:"
+              echo
+              while IFS= read -r file; do
+                echo "- \`${file}\`"
+              done <<< "${conflicts}"
+            fi
+          } > "${RUNNER_TEMP}/body.md"
+          gh pr create "${draft[@]}" \
+            --base "${GITHUB_REF_NAME}" \
+            --head "${branch}" \
+            --title "Update template to ${version}" \
+            --body-file "${RUNNER_TEMP}/body.md"

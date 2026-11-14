@@ -1,7 +1,7 @@
-Pode Module
-===========
+API reference
+=============
 
-.. automodule:: pode.pode
+.. automodule:: pode
     :members:
     :undoc-members:
     :show-inheritance:

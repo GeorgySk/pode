@@ -1,8 +1,6 @@
 import operator
 from functools import reduce
 from itertools import combinations
-from typing import (List,
-                    Tuple)
 
 from gon.base import (Point,
                       Polygon)
@@ -11,6 +9,7 @@ from hypothesis import (assume,
 
 from pode.hints import ConvexDivisorType
 from pode.pode import to_graph
+from pode.utils import TRIANGLE_VERTICES_COUNT
 from tests.strategies.geometry.base import convex_divisors
 from tests.strategies.geometry.composite import fraction_polygons_and_points
 
@@ -18,7 +17,7 @@ from tests.strategies.geometry.composite import fraction_polygons_and_points
 @given(polygon_and_points=fraction_polygons_and_points,
        convex_divisor=convex_divisors)
 def test_polygon_reconstruction(
-        polygon_and_points: Tuple[Polygon, List[Point]],
+        polygon_and_points: tuple[Polygon, list[Point]],
         convex_divisor: ConvexDivisorType) -> None:
     polygon, points = polygon_and_points
     graph = to_graph(polygon, points, convex_divisor=convex_divisor)
@@ -29,7 +28,7 @@ def test_polygon_reconstruction(
 @given(polygon_and_points=fraction_polygons_and_points,
        convex_divisor=convex_divisors)
 def test_parts_intersections(
-        polygon_and_points: Tuple[Polygon, List[Point]],
+        polygon_and_points: tuple[Polygon, list[Point]],
         convex_divisor: ConvexDivisorType) -> None:
     polygon, points = polygon_and_points
     graph = to_graph(polygon, points, convex_divisor=convex_divisor)
@@ -40,11 +39,11 @@ def test_parts_intersections(
 @given(polygon_and_points=fraction_polygons_and_points,
        convex_divisor=convex_divisors)
 def test_nodes_connections(
-        polygon_and_points: Tuple[Polygon, List[Point]],
+        polygon_and_points: tuple[Polygon, list[Point]],
         convex_divisor: ConvexDivisorType) -> None:
     polygon, points = polygon_and_points
     graph = to_graph(polygon, points, convex_divisor=convex_divisor)
-    is_not_triangle = len(polygon.border.vertices) > 3
+    is_not_triangle = len(polygon.border.vertices) > TRIANGLE_VERTICES_COUNT
     has_extra_points = any(point not in set(polygon.border.vertices)
                            for point in points)
     assume(is_not_triangle or has_extra_points or polygon.holes)
