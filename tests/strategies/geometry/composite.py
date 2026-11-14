@@ -1,8 +1,6 @@
-from collections.abc import (Callable,
-                             Iterable)
+from collections.abc import Iterable
 from fractions import Fraction
 from itertools import zip_longest
-from typing import TypeVar
 
 from gon.base import (Contour,
                       Multipoint,
@@ -26,12 +24,9 @@ from tests.strategies.geometry.base import (coordinates_strategies_factories,
                                             polygons,
                                             requirements)
 
-T = TypeVar("T")
-
 
 @st.composite
-def _contours_and_points(draw: Callable[[st.SearchStrategy[T]], T]
-                         ) -> tuple[Contour, Point, Point]:
+def _contours_and_points(draw: st.DrawFn) -> tuple[Contour, Point, Point]:
     contour: Contour = draw(fractions_contours)
     segments = list(edges(contour))
     unit_interval_floats = st.floats(0, 1, exclude_max=True)
@@ -49,8 +44,7 @@ def _contours_and_points(draw: Callable[[st.SearchStrategy[T]], T]
 
 
 @st.composite
-def _multipoints_and_segments(draw: Callable[[st.SearchStrategy[T]], T]
-                              ) -> tuple[Multipoint, Segment]:
+def _multipoints_and_segments(draw: st.DrawFn) -> tuple[Multipoint, Segment]:
     contour: Contour = draw(fractions_contours)
     segments = list(edges(contour))
     multipoint = Multipoint(contour.vertices)
@@ -59,7 +53,7 @@ def _multipoints_and_segments(draw: Callable[[st.SearchStrategy[T]], T]
 
 
 @st.composite
-def _polygons_and_points(draw: Callable[[st.SearchStrategy[T]], T],
+def _polygons_and_points(draw: st.DrawFn,
                          polygons_strategy: st.SearchStrategy[Polygon]
                          ) -> tuple[Polygon, list[Requirement]]:
     polygon: Polygon = draw(polygons_strategy)
@@ -79,7 +73,7 @@ def _polygons_and_points(draw: Callable[[st.SearchStrategy[T]], T],
 
 @st.composite
 def _polygons_and_requirements(
-        draw: Callable[[st.SearchStrategy[T]], T],
+        draw: st.DrawFn,
         polygons_and_points_strategy: st.SearchStrategy[tuple[Polygon,
                                                               list[Point]]]
         ) -> tuple[Polygon, list[Requirement]]:
@@ -94,7 +88,7 @@ def _polygons_and_requirements(
 
 
 @st.composite
-def _vertices_and_sites(draw: Callable[[st.SearchStrategy[T]], T]
+def _vertices_and_sites(draw: st.DrawFn
                         ) -> tuple[list[Point], set[Requirement]]:
     multipoint: Multipoint = draw(multipoints)
     slice_ = draw(st.integers(min_value=0,
@@ -121,8 +115,7 @@ def _bounding_box(points: Iterable[Point]
 
 
 @st.composite
-def _convex_contour_points(draw: Callable[[st.SearchStrategy[T]], T]
-                           ) -> list[Point]:
+def _convex_contour_points(draw: st.DrawFn) -> list[Point]:
     contour: Contour = draw(planar.convex_contours(fractions))
     fractions_lists = draw(st.lists(
         st.lists(st.fractions(min_value=0,
