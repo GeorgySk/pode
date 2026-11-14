@@ -9,7 +9,8 @@ from functools import cached_property
 from itertools import (chain,
                        combinations)
 from typing import (TYPE_CHECKING,
-                    NamedTuple)
+                    NamedTuple,
+                    cast)
 
 import networkx as nx
 from gon.base import (Contour,
@@ -857,6 +858,8 @@ def to_subgraph(*,
         if old_root in edge:
             neighbor = edge[1] if edge[0] == old_root else edge[0]
             graph.edges[edge]["side"] = new_root & neighbor
-    graph = nx.relabel_nodes(graph, {old_root: new_root})
+    # the stubs lose the subclass, but with the default `copy=True`
+    # `relabel_nodes` builds the result with `graph.__class__()`
+    graph = cast("Graph", nx.relabel_nodes(graph, {old_root: new_root}))
     graph.nodes[new_root]["requirements"] = sites
     return graph
