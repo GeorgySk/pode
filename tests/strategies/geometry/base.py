@@ -57,7 +57,9 @@ def coordinates_to_polygons(coordinates: st.SearchStrategy[Scalar]
 
 def coordinates_to_multipoints(coordinates: st.SearchStrategy[Scalar]
                                ) -> st.SearchStrategy[Multipoint]:
-    return planar.multipoints(coordinates, min_size=1)
+    strategy: st.SearchStrategy[Multipoint] = planar.multipoints(
+        coordinates, min_size=1)
+    return strategy
 
 
 polygons = coordinates_strategies.flatmap(coordinates_to_polygons)
