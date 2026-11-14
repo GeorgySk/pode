@@ -99,8 +99,11 @@ class Graph(_PolygonsDiGraph):
         ordered_graph = cls()
         ordered_nodes = list(nx.dfs_postorder_nodes(graph))
         ordered_graph.add_nodes_from(ordered_nodes)
-        directed_edges = (sorted(edge, key=ordered_nodes.index)
-                          for edge in graph.edges)
+        directed_edges = ((start, end)
+                          if (ordered_nodes.index(start)
+                              < ordered_nodes.index(end))
+                          else (end, start)
+                          for start, end in graph.edges)
         ordered_graph.add_edges_from(directed_edges)
         for *edge, side in graph.edges.data("side"):
             if edge in ordered_graph.edges:
