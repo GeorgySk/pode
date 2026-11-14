@@ -739,12 +739,10 @@ def normalize_areas(requirements: list[Scalar],
     :param polygon_area: area of the polygon
     :return: absolute areas
     """
-    *requirements, last_requirement = requirements
-    requirements = [Fraction(requirement) * polygon_area
-                    for requirement in requirements]
-    last_requirement = polygon_area - sum(requirements)
-    requirements.append(last_requirement)
-    return requirements
+    areas = [Fraction(requirement) * polygon_area
+             for requirement in requirements[:-1]]
+    areas.append(polygon_area - sum(areas))
+    return areas
 
 
 def to_graph(polygon: Polygon,
