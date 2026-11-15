@@ -5,7 +5,7 @@ Lumelsky, V., 1998.
 
 __author__ = "Georgy Skorobogatov"
 __email__ = "skorobogatovgeorgy+github@gmail.com"
-__version__ = "0.4.7"
+__version__ = "0.4.8-alpha"
 
 from gon.base import (Contour,
                       Point,
