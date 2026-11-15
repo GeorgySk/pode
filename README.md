@@ -3,7 +3,7 @@ pode
 
 [![](https://github.com/GeorgySk/pode/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/GeorgySk/pode/actions/workflows/ci.yml?query=branch%3Amain "GitHub Actions")
 [![](https://codecov.io/gh/GeorgySk/pode/branch/main/graph/badge.svg)](https://codecov.io/gh/GeorgySk/pode "Codecov")
-[![](https://readthedocs.org/projects/pode/badge/?version=latest)](https://pode.readthedocs.io/en/latest "Documentation")
+[![](https://readthedocs.org/projects/pode-geometry/badge/?version=latest)](https://pode-geometry.readthedocs.io/en/latest "Documentation")
 [![](https://img.shields.io/github/license/GeorgySk/pode.svg)](https://github.com/GeorgySk/pode/blob/main/LICENSE "License")
 [![](https://badge.fury.io/py/pode.svg)](https://badge.fury.io/py/pode "PyPI")
 [![](https://img.shields.io/pypi/pyversions/pode.svg)](https://pypi.org/project/pode "Supported Python versions")
