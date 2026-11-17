@@ -17,7 +17,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -37,7 +37,7 @@ jobs:
       matrix:
         python-version: ["3.11", "3.12", "3.13", "3.14"]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
@@ -57,7 +57,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -73,7 +73,7 @@ jobs:
   docs:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -93,7 +93,7 @@ jobs:
     permissions:
       id-token: write  # PyPI Trusted Publishing
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Check that the tag matches the project version
         run: |
           version="$(sed -n 's/^version = "\(.*\)"$/\1/p' pyproject.toml)"
@@ -115,7 +115,7 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Read build args from .env
         run: grep -E '^(PYTHON_IMAGE_VERSION|POETRY_VERSION)=' .env >> "$GITHUB_ENV"
       - name: Set image name and version
@@ -150,7 +150,7 @@ jobs:
     permissions:
       contents: write  # create the release
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Write release notes from CHANGES.rst
         run: |
           set -e
