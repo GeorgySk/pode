@@ -3,7 +3,8 @@
 from collections import defaultdict
 from collections.abc import (Iterable,
                              Iterator)
-from dataclasses import dataclass
+from dataclasses import (dataclass,
+                         replace)
 from fractions import Fraction
 from functools import cached_property
 from itertools import (chain,
@@ -44,6 +45,21 @@ class Requirement(NamedTuple):
     """Area requirement with an optional point (site)."""
     area: Scalar
     point: Point | None = None
+
+
+@dataclass(frozen=True, eq=False)
+class _IndexedRequirement:
+    """
+    Requirement bound to the index of the input requirement it serves.
+
+    Instances are compared and hashed by identity, so that requirements
+    with the same area and site stay distinct. Pseudo-requirements made
+    while dividing keep the index of the original requirement.
+    """
+
+    area: Fraction
+    point: Point | None
+    index: int
 
 
 class PolygonsSet(frozenset[Polygon]):
@@ -329,7 +345,7 @@ class Graph(_PolygonsDiGraph):
         return new_graph
 
 
-def divide(polygon: Polygon,  # noqa: C901, PLR0912, PLR0915
+def divide(polygon: Polygon,  # noqa: PLR0915
            requirements: list[Requirement],
            convex_divisor: ConvexDivisorType
            = Triangulation.constrained_delaunay
@@ -348,22 +364,21 @@ def divide(polygon: Polygon,  # noqa: C901, PLR0912, PLR0915
     if len(requirements) == 1:
         return [polygon]
     polygon = to_fractions(polygon)
-    requirements = [requirement._replace(point=to_fractions(requirement.point))
-                    if requirement.point is not None
-                    else requirement
-                    for requirement in requirements]
     areas = [requirement.area for requirement in requirements]
     normalized_areas = normalize_areas(areas, polygon.area)
-    requirements = [requirement._replace(area=area)
-                    for requirement, area in zip(requirements,
-                                                 normalized_areas)]
-    resulting_parts: list[Polygon | None] = [None] * len(requirements)
-    reference_requirements = requirements.copy()
-    pseudo_to_original_requirements: dict[Requirement, Requirement] = {}
-    incomplete_parts: defaultdict[Requirement,
-                                  list[Polygon]] = defaultdict(list)
-    site_points = [requirement.point for requirement in requirements
+    indexed_requirements = [
+        _IndexedRequirement(area,
+                            point=(None
+                                   if requirement.point is None
+                                   else to_fractions(requirement.point)),
+                            index=index)
+        for index, (requirement, area) in enumerate(zip(requirements,
+                                                        normalized_areas))]
+    site_points = [requirement.point for requirement in indexed_requirements
                    if requirement.point is not None]
+    resulting_parts: list[Polygon | None] = [None] * len(requirements)
+    # pieces of the parts whose PredPolys were too small, by index
+    incomplete_parts: defaultdict[int, list[Polygon]] = defaultdict(list)
     graph = to_graph(polygon,
                      extra_points=site_points,
                      convex_divisor=convex_divisor)
@@ -374,9 +389,9 @@ def divide(polygon: Polygon,  # noqa: C901, PLR0912, PLR0915
         current_polygon: Polygon = orient(next(node for node in remaining_nodes
                                                if node in graph))
         pred_polys = graph.pred_polys(current_polygon)
-        current_sites, requirements = assign_requirements(
+        current_sites, indexed_requirements = assign_requirements(
             polygon=current_polygon,
-            requirements=requirements,
+            requirements=indexed_requirements,
             graph=graph)
         if not current_sites:
             continue
@@ -385,37 +400,18 @@ def divide(polygon: Polygon,  # noqa: C901, PLR0912, PLR0915
             neighbor = graph.next_neighbor(current_polygon)
             edge = graph[current_polygon][neighbor]["side"]
             requirement = next(iter(current_sites))
-            pseudorequirement = Requirement(requirement.area - pred_polys.area,
-                                            point=edge.centroid)
-            pred_poly = unite(*pred_polys)
-            original_requirement = pseudo_to_original_requirements.get(
-                requirement, requirement)
-            incomplete_parts[original_requirement].append(pred_poly)
+            pseudorequirement = _IndexedRequirement(
+                requirement.area - pred_polys.area,
+                point=edge.centroid,
+                index=requirement.index)
+            incomplete_parts[requirement.index].append(unite(*pred_polys))
             graph.remove_nodes_from(pred_polys)
-            pseudo_to_original_requirements[
-                pseudorequirement] = original_requirement
             graph.nodes[neighbor]["requirements"] |= {pseudorequirement}
         elif len(current_sites) == 1 and pred_polys.area == required_area:
             requirement = next(iter(current_sites))
             graph.remove_nodes_from(pred_polys)
-            if requirement not in pseudo_to_original_requirements:
-                resulting_part = unite(*pred_polys)
-            else:
-                requirement = pseudo_to_original_requirements[requirement]
-                resulting_part = unite(*pred_polys,
-                                       *incomplete_parts[requirement])
-            for index, (reference_requirement, part) in enumerate(
-                    zip(reference_requirements, resulting_parts)):
-                if requirement == reference_requirement and part is None:
-                    resulting_parts[index] = resulting_part
-                    break
-            else:
-                for index, (reference_requirement, part) in enumerate(
-                        zip(reference_requirements, resulting_parts)):
-                    if (requirement.area == reference_requirement.area
-                            and part is None):
-                        resulting_parts[index] = resulting_part
-                        break
+            resulting_parts[requirement.index] = unite(
+                *pred_polys, *incomplete_parts.pop(requirement.index, []))
         else:
             neighbor = graph.next_neighbor(current_polygon)
             extra_points = graph.neighbor_edges_vertices(current_polygon)
@@ -473,9 +469,9 @@ def validate_requirements(requirements: list[Requirement],
 
 def assign_requirements(*,
                         polygon: Polygon,
-                        requirements: list[Requirement],
-                        graph: Graph) -> tuple[frozenset[Requirement],
-                                               list[Requirement]]:
+                        requirements: list[_IndexedRequirement],
+                        graph: Graph) -> tuple[frozenset[_IndexedRequirement],
+                                               list[_IndexedRequirement]]:
     """
     Chooses the requirements to be met by the given node of the graph.
 
@@ -504,7 +500,7 @@ def assign_requirements(*,
             return frozenset({}), requirements
         *requirements, requirement = requirements
         point = polygon.border.vertices[0]
-        requirement = Requirement(requirement.area, point=point)
+        requirement = replace(requirement, point=point)
         return frozenset({requirement}), requirements
     current_preassigned_requirements = graph.nodes[polygon]["requirements"]
     ancestors = nx.ancestors(graph, polygon)
@@ -540,7 +536,7 @@ def assign_requirements(*,
 def split(*,  # noqa: C901, PLR0912, PLR0915
           polygon: Polygon,
           vertices: list[Point],
-          sites: frozenset[Requirement],
+          sites: frozenset[_IndexedRequirement],
           graph: Graph
           ) -> (tuple["nx.DiGraph[Polygon]", "nx.DiGraph[Polygon]"]
                 | tuple["nx.DiGraph[Polygon]", "nx.DiGraph[Polygon]",
@@ -563,7 +559,7 @@ def split(*,  # noqa: C901, PLR0912, PLR0915
         requirements = [next(iter(sites)).area] * len(vertices)
     else:
         sites_per_vertex = list(to_requirements_per_vertex(heads, sites))
-        requirements = [sum(site.area for site in sites_)
+        requirements = [sum((site.area for site in sites_), Fraction(0))
                         for sites_ in sites_per_vertex]
     for (plr, head_index,  # noqa: B007
          requirement, right_sites) in zip(plrs, head_indices,  # noqa: B007
@@ -707,8 +703,8 @@ def split(*,  # noqa: C901, PLR0912, PLR0915
 
 
 def to_requirements_per_vertex(vertices: list[Point],
-                               sites: frozenset[Requirement]
-                               ) -> Iterator[frozenset[Requirement]]:
+                               sites: frozenset[_IndexedRequirement]
+                               ) -> Iterator[frozenset[_IndexedRequirement]]:
     """
     Yields the sites encountered so far for each vertex.
 
@@ -720,11 +716,11 @@ def to_requirements_per_vertex(vertices: list[Point],
         raise ValueError("No sites given")
     if vertices[0] not in {site.point for site in sites}:
         raise ValueError("The first vertex should be a site")
-    sites_per_locations: dict[Point, Requirement] = {site.point: site
-                                                     for site in sites}
+    sites_per_locations: dict[Point, _IndexedRequirement] = {
+        site.point: site for site in sites}
     first_site = sites_per_locations[vertices[0]]
     yield frozenset({first_site})
-    accumulated_sites: frozenset[Requirement] = frozenset()
+    accumulated_sites: frozenset[_IndexedRequirement] = frozenset()
     for vertex in vertices[:-1]:
         site = sites_per_locations.get(vertex)
         if site is not None:
@@ -843,7 +839,7 @@ def to_subgraph(*,
                 predecessors: Iterable[Polygon],
                 old_root: Polygon,
                 new_root: Polygon,
-                sites: frozenset[Requirement],
+                sites: frozenset[_IndexedRequirement],
                 graph: Graph) -> Graph:
     """
     Makes a graph of a part that remains after splitting a node.
