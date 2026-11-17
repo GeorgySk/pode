@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "pode"
-version = "0.4.9"
+version = "0.4.10-alpha"
 description = "Implementation the polygon decomposition algorithm by Hert, S. and Lumelsky, V., 1998"
 authors = [
     { name = "Georgy Skorobogatov", email = "skorobogatovgeorgy+github@gmail.com" },
@@ -33,7 +33,7 @@ dev = [
     # fixed for easier way to reproduce across various machines
     "hypothesis==6.150.2",
     "hypothesis-geometry>=7.3.0,<8.0.0",
-    # keep in sync with the ruff-pre-commit rev in .pre-commit-config.yaml
+    # also the ruff-pre-commit rev in .pre-commit-config.yaml
     "ruff==0.17.4",
     "mypy>=2.4.1,<3.0.0",
     # keep the version prefix in sync with networkx in `dependencies`
