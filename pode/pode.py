@@ -368,9 +368,11 @@ def divide(polygon: Polygon,  # noqa: C901, PLR0912, PLR0915
                      extra_points=site_points,
                      convex_divisor=convex_divisor)
     graph = Graph.from_undirected(graph)
-    remaining_nodes = iter(graph.nodes)
+    # snapshot, so that removing nodes from the graph doesn't break it
+    remaining_nodes: Iterator[Polygon] = iter(list(graph.nodes))
     while graph:
-        current_polygon: Polygon = orient(next(remaining_nodes))
+        current_polygon: Polygon = orient(next(node for node in remaining_nodes
+                                               if node in graph))
         pred_polys = graph.pred_polys(current_polygon)
         current_sites, requirements = assign_requirements(
             polygon=current_polygon,
@@ -442,7 +444,9 @@ def divide(polygon: Polygon,  # noqa: C901, PLR0912, PLR0915
                     graph = graph.prepend_two(parts, neighbor)
                 case (_, _, _):
                     graph = graph.prepend_three(parts, neighbor)
-        remaining_nodes = iter(graph.nodes)
+            # the new parts go first, then the nodes after the current one
+            remaining_nodes = chain([node for part in parts for node in part],
+                                    remaining_nodes)
     return resulting_parts
 
 
