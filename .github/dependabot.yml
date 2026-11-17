@@ -1,8 +1,13 @@
 version: 2
 updates:
-  # Poetry: pyproject.toml (+ poetry.lock, if committed)
+  # Poetry: pyproject.toml (+ poetry.lock, if committed). Only the project's
+  # own dependencies ([project] dependencies): the dev and docs groups come
+  # from the template, which updates them in one place, and reach this
+  # project through `copier update`.
   - package-ecosystem: "pip"
     directory: "/"
+    allow:
+      - dependency-type: "production"
     schedule:
       interval: "weekly"
     groups:

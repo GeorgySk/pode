@@ -138,10 +138,22 @@ Pushing a final release tag `vX.Y.Z` runs the CI publish jobs, which upload
 the package to PyPI and push
 the `prod` Docker image to the GitHub container registry (GHCR).
 Pre-release tags such as `vX.Y.Z-alpha` are not published.
+Alongside them, once the checks pass, the `release` job creates a GitHub release
+for the tag, with the version's section of `CHANGES.rst` as its notes, so
+add the changelog entries before bumping. It doesn't wait for the publish
+jobs: if one fails, fix the cause and re-run that job (not the whole
+pipeline, since a version can be uploaded to PyPI only once).
 
+Release from the default branch once the changes are merged, so that what is
+published has been reviewed and tested.
 `bump-my-version bump release` commits and tags the release, so push both:
 ```bash
 git push --follow-tags
+```
+A plain `git push` doesn't push tags. To make it push the tags of the commits
+it pushes, run once
+```bash
+git config --global push.followTags true
 ```
 
 One-time setup:

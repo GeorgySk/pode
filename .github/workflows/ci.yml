@@ -139,3 +139,54 @@ jobs:
           tags: |
             ${{ env.IMAGE }}:${{ env.VERSION }}
             ${{ env.IMAGE }}:latest
+
+  # A GitHub release for each final version, with the version's CHANGES.rst
+  # section as release notes. Independent of the publish jobs: the tag is the
+  # release, and a failed upload is re-run rather than abandoned.
+  release:
+    needs: [lint, test, build, docs]
+    if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # create the release
+    steps:
+      - uses: actions/checkout@v5
+      - name: Write release notes from CHANGES.rst
+        run: |
+          set -e
+          version="${GITHUB_REF_NAME#v}"
+          project_version="$(sed -n 's/^version = "\(.*\)"$/\1/p' pyproject.toml)"
+          if [ "${version}" != "${project_version}" ]; then
+            echo "Tag v${version} does not match version ${project_version}" >&2
+            exit 1
+          fi
+          awk -v version="${version}" '
+            { line[NR] = $0 }
+            END {
+              for (i = 1; i < NR; i++) {
+                if (index(line[i], version " (") == 1 && line[i + 1] ~ /^-+$/) {
+                  start = i + 2
+                  break
+                }
+              }
+              if (!start) {
+                print "No section for " version " in CHANGES.rst" > "/dev/stderr"
+                exit 1
+              }
+              for (i = start; i <= NR; i++) {
+                if (line[i + 1] ~ /^-+$/) break
+                if (line[i + 1] ~ /^~+$/) {
+                  print "### " line[i]
+                  i++
+                } else print line[i]
+              }
+            }' CHANGES.rst > release-notes.md
+          if ! grep -q '[^[:space:]]' release-notes.md; then
+            echo "No notable changes." > release-notes.md
+          fi
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create "${GITHUB_REF_NAME}" --verify-tag
+          --title "${GITHUB_REF_NAME}" --notes-file release-notes.md
