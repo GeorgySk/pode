@@ -1,13 +1,14 @@
 from gon.base import Point
 from hypothesis import given
 
-from pode.pode import (Requirement,
+from pode.pode import (_IndexedRequirement,
                        to_requirements_per_vertex)
 from tests.strategies.geometry.composite import vertices_and_sites
 
 
 @given(vertices_and_sites)
-def test_max_sum(vertices_and_sites_: tuple[list[Point], set[Requirement]]
+def test_max_sum(vertices_and_sites_: tuple[list[Point],
+                                            set[_IndexedRequirement]]
                  ) -> None:
     vertices, sites = vertices_and_sites_
     accumulated_sites_per_vertex = list(

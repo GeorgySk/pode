@@ -11,7 +11,8 @@ from hypothesis import strategies as st
 from hypothesis_geometry import planar
 
 from pode.hints import Scalar
-from pode.pode import Requirement
+from pode.pode import (_IndexedRequirement,
+                       Requirement)
 from pode.utils import edges
 from tests.pode_tests.config import (MAX_SITES_COUNT,
                                      MIN_REQUIREMENT,
@@ -89,7 +90,7 @@ def _polygons_and_requirements(
 
 @st.composite
 def _vertices_and_sites(draw: st.DrawFn
-                        ) -> tuple[list[Point], set[Requirement]]:
+                        ) -> tuple[list[Point], set[_IndexedRequirement]]:
     multipoint: Multipoint = draw(multipoints)
     slice_ = draw(st.integers(min_value=0,
                               max_value=len(multipoint.points) - 1))
@@ -98,8 +99,9 @@ def _vertices_and_sites(draw: st.DrawFn
     requirements_ = draw(st.lists(st.fractions(min_value=MIN_REQUIREMENT),
                                   min_size=slice_ + 1,
                                   max_size=slice_ + 1))
-    sites = {Requirement(requirement, point=vertex)
-             for vertex, requirement in zip(vertices_subset, requirements_)}
+    sites = {_IndexedRequirement(requirement, point=vertex, index=index)
+             for index, (vertex, requirement) in enumerate(
+                 zip(vertices_subset, requirements_))}
     return multipoint.points, sites
 
 
