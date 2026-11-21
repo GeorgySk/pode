@@ -132,6 +132,36 @@ bump-my-version bump --verbose release
 
 This will set version to `major.minor.patch`.
 
+### Continuous integration
+
+To save CI minutes, the checks (linting, tests, docs and package build) don't
+run on every push:
+
+- Pull requests: every check, with the tests on the oldest and newest
+  supported Python. Draft pull requests run nothing, so open a pull request
+  as a draft while working on it and mark it ready for review to run CI.
+  On GitHub, a new push cancels the run for the previous one.
+- The default branch: only the tests on the oldest Python, for the coverage
+  report and the badges. The merged changes were checked in their pull
+  request.
+- Final release tags `vX.Y.Z`: every check, with the tests on every supported
+  Python, then publishing (see below). Pre-release tags `vX.Y.Z-alpha` run
+  nothing.
+
+Every job has a timeout, so a hanging test can't use up the minutes.
+Dependabot opens its pull requests monthly, one per ecosystem (major
+updates of Python dependencies apart).
+
+Since a merge is followed by only some of the tests, don't merge a pull
+request unless its last commit passed CI.
+On GitHub, enforce this with a ruleset (Settings → Rules → Rulesets → New
+branch ruleset) that targets the default branch and has "Require status
+checks to pass" with the `ci-passed` check, the job that passes only when
+every other check did. Leave "Require branches to be up to date before
+merging" off: it reruns CI every time the default branch moves. Rulesets
+are available for public repositories on every plan, but for private ones
+only on paid plans (GitHub Pro, Team or Enterprise).
+
 ### Publishing
 
 Pushing a final release tag `vX.Y.Z` runs the CI publish jobs, which upload
@@ -229,8 +259,11 @@ This project was generated from the
 To pull in a newer release of the template (CI, tooling and configuration
 fixes), commit your changes, then run
 ```bash
-copier update --defaults
+poetry run copier update --defaults
 ```
+Copier is in the `dev` dependency group, so there is nothing else to install
+(in an environment where Poetry installs into the active Python, such as the
+dev container, plain `copier update --defaults` works too).
 Copier merges the template's changes into the project and keeps yours.
 Review them with `git diff`, resolve any conflict markers and commit.
 `CHANGES.rst` and `pode/__init__.py` are never touched by

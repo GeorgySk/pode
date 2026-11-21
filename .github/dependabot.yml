@@ -1,4 +1,6 @@
 version: 2
+# Monthly, with each ecosystem's updates grouped into one pull request (major
+# Python updates apart), because every pull request runs CI.
 updates:
   # Poetry: pyproject.toml (+ poetry.lock, if committed). Only the project's
   # own dependencies ([project] dependencies): the dev and docs groups come
@@ -9,7 +11,7 @@ updates:
     allow:
       - dependency-type: "production"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
     groups:
       python-minor-patch:
         update-types: ["minor", "patch"]
@@ -17,9 +19,15 @@ updates:
   - package-ecosystem: "devcontainers"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
+    groups:
+      devcontainers:
+        patterns: ["*"]
   # .github/workflows/*.yml
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
+    groups:
+      github-actions:
+        patterns: ["*"]
