@@ -1,4 +1,31 @@
-"""Polygon decomposition algorithm by Hert, S. and Lumelsky, V., 1998."""
+"""
+Polygon area decomposition algorithm of Hert and Lumelsky.
+
+Splits a polygon (convex or not, with or without holes) into parts
+whose areas are given fractions of the whole. A part can be anchored,
+meaning it must contain a given site point.
+
+Outline of :func:`divide`:
+
+1. The polygon is cut into convex parts (by default, a constrained
+   Delaunay triangulation that includes the sites as extra points).
+2. The adjacency graph of the parts is turned into a directed tree
+   (:class:`Graph`), visited in DFS postorder.
+3. Each part is visited in order. Its area, together with the areas
+   of its predecessors (the "PredPoly" of the paper), is matched
+   against the requirements. A part that is too small is merged into
+   its neighbor with a pseudo-requirement for the remaining area.
+   A part that is too large is split by a cut segment.
+
+All arithmetic is done with :class:`~fractions.Fraction`, so area
+comparisons are exact.
+
+Reference:
+    Hert, S. and Lumelsky, V., 1998. Polygon area decomposition for
+    multiple-robot workspace division. International Journal of
+    Computational Geometry & Applications, 8(4), pp. 437-466.
+    https://doi.org/10.1142/S0218195998000230
+"""
 
 from collections import defaultdict
 from collections.abc import (Iterable,
