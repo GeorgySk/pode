@@ -807,7 +807,7 @@ def to_graph(polygon: Polygon,
     parts = list(map(Polygon, parts))
     if len(parts) == 1:
         graph.add_nodes_from(parts)
-    elif convex_divisor is Triangulation.constrained_delaunay:
+    elif convex_divisor == Triangulation.constrained_delaunay:
         parts_per_sides = defaultdict(set)
         for part in parts:
             for side in edges(part.border):
