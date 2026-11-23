@@ -32,35 +32,47 @@ def cut(contour: Contour,
         start: Point,
         end: Point) -> list[Point]:
     """
-    Returns all points of the contour between the start and end points.
+    Returns the points of the contour from the start to the end point.
 
-    The endpoints themselves are included. The points do not necessarily
-    match with contour vertices.
+    The contour is traversed in the order of its vertices. The result
+    starts with the start point, ends with the end point, and contains
+    the contour vertices passed in between. The start and end points
+    don't have to be contour vertices. If they coincide, the whole
+    contour is traversed, so the point is both the first and the last
+    element.
+
+    :param contour: contour to traverse
+    :param start: point on the contour to start from
+    :param end: point on the contour to stop at
+    :return: start point, contour vertices in between, end point
+    :raises ValueError: if the start or end point doesn't lie on the
+                        contour
     """
     if any(point not in contour for point in (start, end)):
         raise ValueError("Both start point and end point should lie on "
                          "the contour")
     vertices = [*contour.vertices, contour.vertices[0]]
-    start_index = (vertices.index(start) if start in vertices
-                   else next((index
-                              for index, edge in enumerate(edges(contour))
-                              if start in edge)))
-    end_index = (vertices[1:].index(end) + 1 if end in vertices
-                 else next((index for index, edge in enumerate(edges(contour))
-                           if end in edge)))
-    if start_index < end_index:
-        result = vertices[start_index + 1:end_index + 1]
-    elif start_index > end_index:
-        result = vertices[start_index + 1:-1] + vertices[:end_index + 1]
-    else:
-        segment_to_start = Segment(vertices[start_index], start)
-        segment_to_end = Segment(vertices[start_index], end)
-        if segment_to_start.length < segment_to_end.length:
-            return [start, end]
-        result = vertices[start_index + 1:-1] + vertices[:end_index + 1]
-    head = [vertices[start_index]] if start in vertices else [start]
-    tail = [] if end in vertices else [end]
-    return head + result + tail
+    sides = list(edges(contour))
+    start_is_vertex = start in vertices
+    end_is_vertex = end in vertices
+    # A vertex start is the start of the side that follows it,
+    # while a vertex end is the end of the side that precedes it.
+    start_index = (vertices.index(start) if start_is_vertex
+                   else next(index for index, side in enumerate(sides)
+                             if start in side))
+    end_index = (vertices.index(end, 1) if end_is_vertex
+                 else next(index for index, side in enumerate(sides)
+                           if end in side))
+    side_start = vertices[start_index]
+    goes_forward = (start_index < end_index
+                    or (start_index == end_index
+                        and (squared_distance(side_start, start)
+                             < squared_distance(side_start, end))))
+    result = (vertices[start_index + 1:end_index + 1] if goes_forward
+              else vertices[start_index + 1:-1] + vertices[:end_index + 1])
+    # A vertex end is already the last element of the result.
+    tail = [] if end_is_vertex else [end]
+    return [start, *result, *tail]
 
 
 def edges(contour: Contour) -> Iterator[Segment]:
@@ -68,6 +80,22 @@ def edges(contour: Contour) -> Iterator[Segment]:
     vertices = [*contour.vertices, contour.vertices[0]]
     yield from (Segment(vertices[index], vertices[index + 1])
                 for index in range(len(vertices) - 1))
+
+
+def squared_distance(first: Point,
+                     second: Point) -> Scalar:
+    """
+    Returns the squared Euclidean distance between the points.
+
+    Unlike the distance itself, it needs no square root, so it stays
+    exact for rational coordinates.
+
+    :param first: one point
+    :param second: other point
+    :return: squared distance
+    """
+    return ((first.x - second.x) ** 2  # type: ignore[no-any-return]
+            + (first.y - second.y) ** 2)
 
 
 def shrink_collinear_vertices(contour: Contour) -> list[Point]:
