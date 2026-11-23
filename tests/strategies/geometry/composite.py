@@ -13,7 +13,6 @@ from hypothesis_geometry import planar
 from pode.hints import Scalar
 from pode.pode import (_IndexedRequirement,
                        Requirement)
-from pode.utils import edges
 from tests.pode_tests.config import (MAX_SITES_COUNT,
                                      MIN_REQUIREMENT,
                                      MIN_SITES_COUNT)
@@ -29,7 +28,7 @@ from tests.strategies.geometry.base import (coordinates_strategies_factories,
 @st.composite
 def _contours_and_points(draw: st.DrawFn) -> tuple[Contour, Point, Point]:
     contour: Contour = draw(fractions_contours)
-    segments = list(edges(contour))
+    segments = list(contour.segments)
     unit_interval_floats = st.floats(0, 1, exclude_max=True)
     unit_interval_fractions = st.builds(Fraction, unit_interval_floats)
     segments_and_fractions = st.tuples(st.sampled_from(segments),
@@ -47,7 +46,7 @@ def _contours_and_points(draw: st.DrawFn) -> tuple[Contour, Point, Point]:
 @st.composite
 def _multipoints_and_segments(draw: st.DrawFn) -> tuple[Multipoint, Segment]:
     contour: Contour = draw(fractions_contours)
-    segments = list(edges(contour))
+    segments = list(contour.segments)
     multipoint = Multipoint(contour.vertices)
     edge = draw(st.sampled_from(segments))
     return multipoint, edge

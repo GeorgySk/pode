@@ -58,7 +58,6 @@ from pode.hints import (ConvexDivisorType,
                         Scalar)
 from pode.utils import (TRIANGLE_VERTICES_COUNT,
                         cut,
-                        edges,
                         order_convex_contour_points,
                         orient,
                         rotate,
@@ -810,7 +809,7 @@ def to_graph(polygon: Polygon,
     elif convex_divisor == Triangulation.constrained_delaunay:
         parts_per_sides = defaultdict(set)
         for part in parts:
-            for side in edges(part.border):
+            for side in part.border.segments:
                 parts_per_sides[side].add(part)
         for side, side_parts in parts_per_sides.items():
             if len(side_parts) > 1:  # shared by two parts

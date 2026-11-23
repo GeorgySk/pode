@@ -76,10 +76,20 @@ def cut(contour: Contour,
 
 
 def edges(contour: Contour) -> Iterator[Segment]:
-    """Yields the sides of the contour in the order of its vertices."""
-    vertices = [*contour.vertices, contour.vertices[0]]
-    yield from (Segment(vertices[index], vertices[index + 1])
-                for index in range(len(vertices) - 1))
+    """
+    Returns the sides of the contour in the order of its vertices.
+
+    Side ``i`` goes from vertex ``i`` to vertex ``i + 1``, so the first
+    side starts at ``contour.vertices[0]`` and the last one closes the
+    contour. Unlike ``contour.segments``, which starts with the closing
+    side, this order matches the vertex indices. Where the order
+    doesn't matter, prefer the cached ``contour.segments``.
+
+    :param contour: contour to take the sides of
+    :return: sides of the contour
+    """
+    vertices = contour.vertices
+    return map(Segment, vertices, [*vertices[1:], vertices[0]])
 
 
 def squared_distance(first: Point,
@@ -225,9 +235,9 @@ def joined_constrained_delaunay_triangles(
     while True:
         resulting_polygon = initial_polygon
         for index, part in enumerate(iter(polygons)):
-            part_sides = set(edges(part.border))
+            part_sides = set(part.border.segments)
             common_side = next((edge
-                                for edge in edges(resulting_polygon.border)
+                                for edge in resulting_polygon.border.segments
                                 if edge in part_sides), None)
             if common_side is None:
                 continue
