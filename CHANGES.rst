@@ -8,6 +8,22 @@ and this project adheres to `Semantic Versioning <https://semver.org/>`_.
 Unreleased
 ----------
 
+Changed
+~~~~~~~
+
+- ``ConvexDivisorType`` now matches how ``divide`` calls the divisor:
+  the polygon is positional-only, ``extra_points`` is required, the unused
+  ``extra_constraints`` parameter is removed, and the return type is
+  ``Iterable[Contour] | Triangulation``.
+
+Fixed
+~~~~~
+
+- The fast adjacency-graph construction for the default convex divisor
+  (``Triangulation.constrained_delaunay``) was never used, because the
+  divisor was compared by identity. Building the graph for large polygons
+  is now much faster.
+
 0.4.13 (2026-11-21)
 ------------------------------
 

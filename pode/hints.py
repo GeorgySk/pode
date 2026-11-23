@@ -1,6 +1,7 @@
 """Type hints shared across the package."""
 
-from collections.abc import Sequence
+from collections.abc import (Iterable,
+                             Sequence)
 from fractions import Fraction
 from typing import (Protocol,
                     TypeAlias)
@@ -8,7 +9,7 @@ from typing import (Protocol,
 from gon.base import (Contour,
                       Point,
                       Polygon,
-                      Segment)
+                      Triangulation)
 from ground.base import Context
 
 #: Real number accepted as an area requirement. ``int`` is included
@@ -23,18 +24,17 @@ class ConvexDivisorType(Protocol):
 
     def __call__(self,
                  polygon: Polygon,
+                 /,
                  *,
-                 extra_points: Sequence[Point] = (),
-                 extra_constraints: Sequence[Segment] = (),
-                 context: Context) -> list[Contour]:
+                 extra_points: Sequence[Point],
+                 context: Context) -> Iterable[Contour] | Triangulation:
         """
         Divides the polygon into convex parts.
 
         :param polygon: polygon to divide
         :param extra_points: points that must become vertices of the
                              parts
-        :param extra_constraints: segments that must lie on the borders
-                                  of the parts
         :param context: geometric context
-        :return: borders of the convex parts
+        :return: borders of the convex parts, or a triangulation whose
+                 triangles are the parts
         """
